@@ -1,5 +1,4 @@
-const { createCanvas, loadImage, registerFont } = require('canvas');
-const path = require('path');
+const { createCanvas, loadImage } = require('@napi-rs/canvas');
 
 const CARD_WIDTH = 934;
 const CARD_HEIGHT = 282;
