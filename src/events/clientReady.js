@@ -1,7 +1,8 @@
 const chalk = require('chalk');
+const { getConfig } = require('../database/db');
 
 module.exports = {
-  name: 'clientReady',
+  name: 'ready',
   once: true,
   execute(client) {
     console.log(chalk.magenta(`\n🐺 Wolfy is online as ${client.user.tag}`));
@@ -9,10 +10,16 @@ module.exports = {
 
     const status = process.env.BOT_STATUS || 'Watching the pack 🐺';
     const statusType = process.env.BOT_STATUS_TYPE || 'WATCHING';
-    const activityTypes = { PLAYING: 0, STREAMING: 1, LISTENING: 2, WATCHING: 3, COMPETING: 5 };
+
+    const activityTypes = {
+      PLAYING: 0, STREAMING: 1, LISTENING: 2, WATCHING: 3, COMPETING: 5,
+    };
 
     client.user.setPresence({
-      activities: [{ name: status, type: activityTypes[statusType.toUpperCase()] ?? 3 }],
+      activities: [{
+        name: status,
+        type: activityTypes[statusType.toUpperCase()] ?? 3,
+      }],
       status: process.env.BOT_ONLINE_STATUS || 'online',
     });
   },

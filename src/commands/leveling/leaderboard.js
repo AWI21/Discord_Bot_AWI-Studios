@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const { getLeaderboard } = require('../../database/db');
 const { calculateLevel } = require('../../systems/leveling');
 
@@ -6,25 +6,20 @@ module.exports = {
   name: 'leaderboard',
   aliases: ['lb', 'top'],
   cooldown: 15,
-  async execute(message, args) {
-    const top = getLeaderboard(message.guild.id, 10);
-    if (!top.length) return message.reply('No users have gained XP yet!');
+  slashData: new SlashCommandBuilder().setName('leaderboard').setDescription('View the XP leaderboard'),
 
-    const medals = ['🥇', '🥈', '🥉'];
-
-    const list = top.map((u, i) => {
-      const medal = medals[i] || `**${i + 1}.**`;
-      const level = calculateLevel(u.xp);
-      return `${medal} <@${u.user_id}> — Level **${level}** | **${u.xp.toLocaleString()}** XP`;
-    }).join('\n');
-
-    const embed = new EmbedBuilder()
-      .setColor(0x7c3aed)
-      .setTitle(`🐺 ${message.guild.name} — XP Leaderboard`)
-      .setDescription(list)
-      .setThumbnail(message.guild.iconURL({ dynamic: true }))
-      .setTimestamp();
-
-    message.reply({ embeds: [embed] });
+  async execute(message) {
+    message.reply({ embeds: [await buildEmbed(message.guild)] });
+  },
+  async executeSlash(interaction) {
+    await interaction.reply({ embeds: [await buildEmbed(interaction.guild)] });
   },
 };
+
+async function buildEmbed(guild) {
+  const top = await getLeaderboard(guild.id, 10);
+  if (!top.length) return new EmbedBuilder().setColor(0x7c3aed).setDescription('No users have gained XP yet!');
+  const medals = ['🥇', '🥈', '🥉'];
+  const list = top.map((u, i) => `${medals[i] || `**${i + 1}.**`} <@${u.user_id}> — Level **${calculateLevel(u.xp)}** | **${u.xp.toLocaleString()}** XP`).join('\n');
+  return new EmbedBuilder().setColor(0x7c3aed).setTitle(`🐺 ${guild.name} — XP Leaderboard`).setDescription(list).setThumbnail(guild.iconURL({ dynamic: true })).setTimestamp();
+}

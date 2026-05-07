@@ -15,6 +15,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildMessageReactions,
   ],
   partials: [Partials.Channel, Partials.Message, Partials.GuildMember],
 });
@@ -26,11 +27,12 @@ client.xpCooldowns = new Collection();
 async function startBot() {
   console.log(chalk.cyan('\n🐺 Starting Wolfy Bot...\n'));
 
-  initDatabase();
+  // DB is async now — must await before anything else
+  await initDatabase();
   await loadCommands(client);
   loadEvents(client);
 
-  client.once('ready', () => {
+  client.once('clientReady', () => {
     startBirthdayChecker(client);
     startNotificationPoller(client);
   });

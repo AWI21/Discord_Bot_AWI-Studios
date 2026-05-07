@@ -1,308 +1,266 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const { createClient } = require('@libsql/client');
 const chalk = require('chalk');
 
-const DB_PATH = path.join(__dirname, '../../data/wolfy.db');
 let db;
 
-function initDatabase() {
-  // Auto-create the data directory if it doesn't exist (required on Render)
-  const dataDir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+async function initDatabase() {
+  const url = process.env.DATABASE_URL?.trim();
+  const authToken = process.env.DATABASE_AUTH_TOKEN?.trim();
+
+  if (!url || !authToken) {
+    console.error(chalk.red('❌ Database credentials missing in .env!'));
+    process.exit(1);
   }
-  db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS guild_config (
-      guild_id TEXT NOT NULL,
-      key TEXT NOT NULL,
-      value TEXT,
-      PRIMARY KEY (guild_id, key)
-    );
+  db = createClient({ url, authToken });
 
-    CREATE TABLE IF NOT EXISTS users (
-      user_id TEXT NOT NULL,
-      guild_id TEXT NOT NULL,
-      xp INTEGER DEFAULT 0,
-      level INTEGER DEFAULT 0,
-      messages INTEGER DEFAULT 0,
-      PRIMARY KEY (user_id, guild_id)
-    );
+  // Refined schema for maximum Turso compatibility
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS guild_config (guild_id TEXT, key TEXT, value TEXT, PRIMARY KEY (guild_id, key))`,
+    `CREATE TABLE IF NOT EXISTS users (user_id TEXT, guild_id TEXT, xp INTEGER DEFAULT 0, level INTEGER DEFAULT 0, messages INTEGER DEFAULT 0, PRIMARY KEY (user_id, guild_id))`,
+    `CREATE TABLE IF NOT EXISTS warnings (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, guild_id TEXT, reason TEXT, moderator_id TEXT, timestamp INTEGER)`,
+    `CREATE TABLE IF NOT EXISTS birthdays (user_id TEXT, guild_id TEXT, month INTEGER, day INTEGER, PRIMARY KEY (user_id, guild_id))`,
+    `CREATE TABLE IF NOT EXISTS vouches (user_id TEXT, guild_id TEXT, points INTEGER DEFAULT 0, PRIMARY KEY (user_id, guild_id))`,
+    `CREATE TABLE IF NOT EXISTS vouch_log (id INTEGER PRIMARY KEY AUTOINCREMENT, target_id TEXT, guild_id TEXT, points INTEGER, given_by TEXT, timestamp INTEGER)`,
+    `CREATE TABLE IF NOT EXISTS achievements (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, name TEXT, description TEXT, requirement_type TEXT, requirement_value INTEGER, reward_role_id TEXT, reward_xp INTEGER DEFAULT 0)`,
+    `CREATE TABLE IF NOT EXISTS user_achievements (user_id TEXT, guild_id TEXT, achievement_id INTEGER, earned_at INTEGER, PRIMARY KEY (user_id, guild_id, achievement_id))`,
+    `CREATE TABLE IF NOT EXISTS custom_commands (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, trigger TEXT, response TEXT, UNIQUE(guild_id, trigger))`,
+    `CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT UNIQUE, guild_id TEXT, user_id TEXT, status TEXT DEFAULT 'open', created_at INTEGER)`,
+    `CREATE TABLE IF NOT EXISTS notification_cache (id TEXT, platform TEXT, guild_id TEXT, posted_at INTEGER, PRIMARY KEY (id, platform, guild_id))`,
+    `CREATE TABLE IF NOT EXISTS auto_roles (guild_id TEXT, role_id TEXT, PRIMARY KEY (guild_id, role_id))`,
+    `CREATE TABLE IF NOT EXISTS automod_words (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, word TEXT, UNIQUE(guild_id, word))`,
+    `CREATE TABLE IF NOT EXISTS command_channels (guild_id TEXT, channel_id TEXT, PRIMARY KEY (guild_id, channel_id))`
+  ];
 
-    CREATE TABLE IF NOT EXISTS warnings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT NOT NULL,
-      guild_id TEXT NOT NULL,
-      reason TEXT NOT NULL,
-      moderator_id TEXT NOT NULL,
-      timestamp INTEGER NOT NULL
-    );
+  console.log(chalk.blue('⏳ Syncing tables with Turso...'));
 
-    CREATE TABLE IF NOT EXISTS birthdays (
-      user_id TEXT NOT NULL,
-      guild_id TEXT NOT NULL,
-      month INTEGER NOT NULL,
-      day INTEGER NOT NULL,
-      PRIMARY KEY (user_id, guild_id)
-    );
+  for (const query of tables) {
+    try {
+      await db.execute(query);
+    } catch (err) {
+      if (!err.message.includes("already exists")) {
+        console.error(chalk.yellow(`⚠️ SQL Error on query: ${query.substring(0, 30)}...`));
+        console.error(chalk.red(`   Reason: ${err.message}`));
+      }
+    }
+  }
 
-    CREATE TABLE IF NOT EXISTS vouches (
-      user_id TEXT NOT NULL,
-      guild_id TEXT NOT NULL,
-      points INTEGER DEFAULT 0,
-      PRIMARY KEY (user_id, guild_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS vouch_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      target_id TEXT NOT NULL,
-      guild_id TEXT NOT NULL,
-      points INTEGER NOT NULL,
-      given_by TEXT NOT NULL,
-      timestamp INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS achievements (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guild_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      description TEXT NOT NULL,
-      requirement_type TEXT NOT NULL,
-      requirement_value INTEGER NOT NULL,
-      reward_role_id TEXT,
-      reward_xp INTEGER DEFAULT 0
-    );
-
-    CREATE TABLE IF NOT EXISTS user_achievements (
-      user_id TEXT NOT NULL,
-      guild_id TEXT NOT NULL,
-      achievement_id INTEGER NOT NULL,
-      earned_at INTEGER NOT NULL,
-      PRIMARY KEY (user_id, guild_id, achievement_id),
-      FOREIGN KEY (achievement_id) REFERENCES achievements(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS custom_commands (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guild_id TEXT NOT NULL,
-      trigger TEXT NOT NULL,
-      response TEXT NOT NULL,
-      UNIQUE(guild_id, trigger)
-    );
-
-    CREATE TABLE IF NOT EXISTS tickets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      channel_id TEXT UNIQUE NOT NULL,
-      guild_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      status TEXT DEFAULT 'open',
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS notification_cache (
-      id TEXT NOT NULL,
-      platform TEXT NOT NULL,
-      guild_id TEXT NOT NULL,
-      posted_at INTEGER NOT NULL,
-      PRIMARY KEY (id, platform, guild_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS auto_roles (
-      guild_id TEXT NOT NULL,
-      role_id TEXT NOT NULL,
-      PRIMARY KEY (guild_id, role_id)
-    );
-  `);
-
-  console.log(chalk.green('✅ Database initialized'));
+  console.log(chalk.green('✅ Turso database initialized'));
 }
 
-function getDb() {
-  return db;
+// ── Helper: get first row ────────────────────────────────────────────────────
+function first(result) {
+  return result.rows && result.rows.length > 0 ? result.rows[0] : null;
 }
 
-// ── Generic config helpers ──────────────────────────────────────────────────
-function getConfig(guildId, key) {
-  const row = db.prepare('SELECT value FROM guild_config WHERE guild_id = ? AND key = ?').get(guildId, key);
-  return row ? row.value : null;
+// ── Config ───────────────────────────────────────────────────────────────────
+async function getConfig(guildId, key) {
+  const r = await db.execute({ sql: 'SELECT value FROM guild_config WHERE guild_id = ? AND key = ?', args: [guildId, key] });
+  return first(r)?.value ?? null;
+}
+async function setConfig(guildId, key, value) {
+  await db.execute({ sql: 'INSERT OR REPLACE INTO guild_config (guild_id, key, value) VALUES (?, ?, ?)', args: [guildId, key, String(value)] });
+}
+async function deleteConfig(guildId, key) {
+  await db.execute({ sql: 'DELETE FROM guild_config WHERE guild_id = ? AND key = ?', args: [guildId, key] });
 }
 
-function setConfig(guildId, key, value) {
-  db.prepare('INSERT OR REPLACE INTO guild_config (guild_id, key, value) VALUES (?, ?, ?)').run(guildId, key, String(value));
+// ── Users / XP ───────────────────────────────────────────────────────────────
+async function getUser(userId, guildId) {
+  const r = await db.execute({ sql: 'SELECT * FROM users WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
+  return first(r);
 }
-
-function deleteConfig(guildId, key) {
-  db.prepare('DELETE FROM guild_config WHERE guild_id = ? AND key = ?').run(guildId, key);
+async function ensureUser(userId, guildId) {
+  await db.execute({ sql: 'INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?, ?)', args: [userId, guildId] });
 }
-
-// ── User XP helpers ─────────────────────────────────────────────────────────
-function getUser(userId, guildId) {
-  return db.prepare('SELECT * FROM users WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
+async function addXP(userId, guildId, amount) {
+  await ensureUser(userId, guildId);
+  await db.execute({ sql: 'UPDATE users SET xp = xp + ?, messages = messages + 1 WHERE user_id = ? AND guild_id = ?', args: [amount, userId, guildId] });
+  return getUser(userId, guildId);
 }
-
-function ensureUser(userId, guildId) {
-  db.prepare('INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?, ?)').run(userId, guildId);
+async function setXP(userId, guildId, amount) {
+  await ensureUser(userId, guildId);
+  await db.execute({ sql: 'UPDATE users SET xp = ? WHERE user_id = ? AND guild_id = ?', args: [amount, userId, guildId] });
 }
-
-function addXP(userId, guildId, amount) {
-  ensureUser(userId, guildId);
-  db.prepare('UPDATE users SET xp = xp + ?, messages = messages + 1 WHERE user_id = ? AND guild_id = ?').run(amount, userId, guildId);
-  return db.prepare('SELECT * FROM users WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
+async function setLevel(userId, guildId, level) {
+  await db.execute({ sql: 'UPDATE users SET level = ? WHERE user_id = ? AND guild_id = ?', args: [level, userId, guildId] });
 }
-
-function setLevel(userId, guildId, level) {
-  db.prepare('UPDATE users SET level = ? WHERE user_id = ? AND guild_id = ?').run(level, userId, guildId);
+async function resetAllXP(guildId) {
+  await db.execute({ sql: 'UPDATE users SET xp = 0, level = 0, messages = 0 WHERE guild_id = ?', args: [guildId] });
 }
-
-function getLeaderboard(guildId, limit = 10) {
-  return db.prepare('SELECT * FROM users WHERE guild_id = ? ORDER BY xp DESC LIMIT ?').all(guildId, limit);
+async function getLeaderboard(guildId, limit = 10) {
+  const r = await db.execute({ sql: 'SELECT * FROM users WHERE guild_id = ? ORDER BY xp DESC LIMIT ?', args: [guildId, limit] });
+  return r.rows;
 }
-
-function getUserRank(userId, guildId) {
-  const users = db.prepare('SELECT user_id FROM users WHERE guild_id = ? ORDER BY xp DESC').all(guildId);
-  const index = users.findIndex(u => u.user_id === userId);
+async function getUserRank(userId, guildId) {
+  const r = await db.execute({ sql: 'SELECT user_id FROM users WHERE guild_id = ? ORDER BY xp DESC', args: [guildId] });
+  const index = r.rows.findIndex(u => u.user_id === userId);
   return index === -1 ? null : index + 1;
 }
 
-// ── Warning helpers ──────────────────────────────────────────────────────────
-function addWarning(userId, guildId, reason, moderatorId) {
-  return db.prepare('INSERT INTO warnings (user_id, guild_id, reason, moderator_id, timestamp) VALUES (?, ?, ?, ?, ?)').run(userId, guildId, reason, moderatorId, Date.now());
+// ── Warnings ──────────────────────────────────────────────────────────────────
+async function addWarning(userId, guildId, reason, moderatorId) {
+  await db.execute({ sql: 'INSERT INTO warnings (user_id, guild_id, reason, moderator_id, timestamp) VALUES (?, ?, ?, ?, ?)', args: [userId, guildId, reason, moderatorId, Date.now()] });
+}
+async function getWarnings(userId, guildId) {
+  const r = await db.execute({ sql: 'SELECT * FROM warnings WHERE user_id = ? AND guild_id = ? ORDER BY timestamp DESC', args: [userId, guildId] });
+  return r.rows;
+}
+async function clearWarnings(userId, guildId) {
+  await db.execute({ sql: 'DELETE FROM warnings WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
+}
+async function removeWarning(warningId) {
+  await db.execute({ sql: 'DELETE FROM warnings WHERE id = ?', args: [warningId] });
 }
 
-function getWarnings(userId, guildId) {
-  return db.prepare('SELECT * FROM warnings WHERE user_id = ? AND guild_id = ? ORDER BY timestamp DESC').all(userId, guildId);
+// ── Birthdays ─────────────────────────────────────────────────────────────────
+async function setBirthday(userId, guildId, month, day) {
+  await db.execute({ sql: 'INSERT OR REPLACE INTO birthdays (user_id, guild_id, month, day) VALUES (?, ?, ?, ?)', args: [userId, guildId, month, day] });
+}
+async function getBirthday(userId, guildId) {
+  const r = await db.execute({ sql: 'SELECT * FROM birthdays WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
+  return first(r);
+}
+async function getTodayBirthdays(month, day) {
+  const r = await db.execute({ sql: 'SELECT * FROM birthdays WHERE month = ? AND day = ?', args: [month, day] });
+  return r.rows;
 }
 
-function clearWarnings(userId, guildId) {
-  return db.prepare('DELETE FROM warnings WHERE user_id = ? AND guild_id = ?').run(userId, guildId);
+// ── Vouches ───────────────────────────────────────────────────────────────────
+async function addVouch(targetId, guildId, points, giverId) {
+  await db.execute({ sql: 'INSERT OR IGNORE INTO vouches (user_id, guild_id) VALUES (?, ?)', args: [targetId, guildId] });
+  await db.execute({ sql: 'UPDATE vouches SET points = points + ? WHERE user_id = ? AND guild_id = ?', args: [points, targetId, guildId] });
+  await db.execute({ sql: 'INSERT INTO vouch_log (target_id, guild_id, points, given_by, timestamp) VALUES (?, ?, ?, ?, ?)', args: [targetId, guildId, points, giverId, Date.now()] });
+}
+async function getVouches(userId, guildId) {
+  const r = await db.execute({ sql: 'SELECT * FROM vouches WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
+  return first(r);
+}
+async function getVouchLeaderboard(guildId, limit = 10) {
+  const r = await db.execute({ sql: 'SELECT * FROM vouches WHERE guild_id = ? ORDER BY points DESC LIMIT ?', args: [guildId, limit] });
+  return r.rows;
 }
 
-function removeWarning(warningId) {
-  return db.prepare('DELETE FROM warnings WHERE id = ?').run(warningId);
+// ── Achievements ──────────────────────────────────────────────────────────────
+async function createAchievement(guildId, name, description, requirementType, requirementValue, rewardRoleId, rewardXp) {
+  await db.execute({ sql: 'INSERT INTO achievements (guild_id, name, description, requirement_type, requirement_value, reward_role_id, reward_xp) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [guildId, name, description, requirementType, requirementValue, rewardRoleId || null, rewardXp || 0] });
 }
-
-// ── Birthday helpers ─────────────────────────────────────────────────────────
-function setBirthday(userId, guildId, month, day) {
-  db.prepare('INSERT OR REPLACE INTO birthdays (user_id, guild_id, month, day) VALUES (?, ?, ?, ?)').run(userId, guildId, month, day);
+async function deleteAchievement(id, guildId) {
+  await db.execute({ sql: 'DELETE FROM user_achievements WHERE achievement_id = ?', args: [id] });
+  await db.execute({ sql: 'DELETE FROM achievements WHERE id = ? AND guild_id = ?', args: [id, guildId] });
 }
-
-function getBirthday(userId, guildId) {
-  return db.prepare('SELECT * FROM birthdays WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
+async function getAchievements(guildId) {
+  const r = await db.execute({ sql: 'SELECT * FROM achievements WHERE guild_id = ?', args: [guildId] });
+  return r.rows;
 }
-
-function getTodayBirthdays(month, day) {
-  return db.prepare('SELECT * FROM birthdays WHERE month = ? AND day = ?').all(month, day);
+async function getUserAchievements(userId, guildId) {
+  const r = await db.execute({ sql: 'SELECT a.*, ua.earned_at FROM achievements a JOIN user_achievements ua ON a.id = ua.achievement_id WHERE ua.user_id = ? AND ua.guild_id = ?', args: [userId, guildId] });
+  return r.rows;
 }
-
-// ── Vouch helpers ────────────────────────────────────────────────────────────
-function addVouch(targetId, guildId, points, giverId) {
-  db.prepare('INSERT OR IGNORE INTO vouches (user_id, guild_id) VALUES (?, ?)').run(targetId, guildId);
-  db.prepare('UPDATE vouches SET points = points + ? WHERE user_id = ? AND guild_id = ?').run(points, targetId, guildId);
-  db.prepare('INSERT INTO vouch_log (target_id, guild_id, points, given_by, timestamp) VALUES (?, ?, ?, ?, ?)').run(targetId, guildId, points, giverId, Date.now());
-}
-
-function getVouches(userId, guildId) {
-  return db.prepare('SELECT * FROM vouches WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
-}
-
-function getVouchLeaderboard(guildId, limit = 10) {
-  return db.prepare('SELECT * FROM vouches WHERE guild_id = ? ORDER BY points DESC LIMIT ?').all(guildId, limit);
-}
-
-// ── Achievement helpers ──────────────────────────────────────────────────────
-function createAchievement(guildId, name, description, requirementType, requirementValue, rewardRoleId, rewardXp) {
-  return db.prepare('INSERT INTO achievements (guild_id, name, description, requirement_type, requirement_value, reward_role_id, reward_xp) VALUES (?, ?, ?, ?, ?, ?, ?)').run(guildId, name, description, requirementType, requirementValue, rewardRoleId || null, rewardXp || 0);
-}
-
-function getAchievements(guildId) {
-  return db.prepare('SELECT * FROM achievements WHERE guild_id = ?').all(guildId);
-}
-
-function getUserAchievements(userId, guildId) {
-  return db.prepare(`
-    SELECT a.*, ua.earned_at FROM achievements a
-    JOIN user_achievements ua ON a.id = ua.achievement_id
-    WHERE ua.user_id = ? AND ua.guild_id = ?
-  `).all(userId, guildId);
-}
-
-function grantAchievement(userId, guildId, achievementId) {
+async function grantAchievement(userId, guildId, achievementId) {
   try {
-    db.prepare('INSERT OR IGNORE INTO user_achievements (user_id, guild_id, achievement_id, earned_at) VALUES (?, ?, ?, ?)').run(userId, guildId, achievementId, Date.now());
+    await db.execute({ sql: 'INSERT OR IGNORE INTO user_achievements (user_id, guild_id, achievement_id, earned_at) VALUES (?, ?, ?, ?)', args: [userId, guildId, achievementId, Date.now()] });
     return true;
   } catch { return false; }
 }
-
-function hasAchievement(userId, guildId, achievementId) {
-  return !!db.prepare('SELECT 1 FROM user_achievements WHERE user_id = ? AND guild_id = ? AND achievement_id = ?').get(userId, guildId, achievementId);
+async function hasAchievement(userId, guildId, achievementId) {
+  const r = await db.execute({ sql: 'SELECT 1 FROM user_achievements WHERE user_id = ? AND guild_id = ? AND achievement_id = ?', args: [userId, guildId, achievementId] });
+  return r.rows.length > 0;
+}
+async function revokeUserAchievement(userId, guildId, achievementId) {
+  await db.execute({ sql: 'DELETE FROM user_achievements WHERE user_id = ? AND guild_id = ? AND achievement_id = ?', args: [userId, guildId, achievementId] });
+}
+async function revokeAllUserAchievements(userId, guildId) {
+  await db.execute({ sql: 'DELETE FROM user_achievements WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
 }
 
-// ── Custom command helpers ───────────────────────────────────────────────────
-function addCustomCommand(guildId, trigger, response) {
-  db.prepare('INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response) VALUES (?, ?, ?)').run(guildId, trigger.toLowerCase(), response);
+// ── Custom commands ───────────────────────────────────────────────────────────
+async function addCustomCommand(guildId, trigger, response) {
+  await db.execute({ sql: 'INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response) VALUES (?, ?, ?)', args: [guildId, trigger.toLowerCase(), response] });
+}
+async function removeCustomCommand(guildId, trigger) {
+  const r = await db.execute({ sql: 'DELETE FROM custom_commands WHERE guild_id = ? AND trigger = ?', args: [guildId, trigger.toLowerCase()] });
+  return { changes: r.rowsAffected };
+}
+async function getCustomCommand(guildId, trigger) {
+  const r = await db.execute({ sql: 'SELECT * FROM custom_commands WHERE guild_id = ? AND trigger = ?', args: [guildId, trigger.toLowerCase()] });
+  return first(r);
+}
+async function getAllCustomCommands(guildId) {
+  const r = await db.execute({ sql: 'SELECT * FROM custom_commands WHERE guild_id = ?', args: [guildId] });
+  return r.rows;
 }
 
-function removeCustomCommand(guildId, trigger) {
-  return db.prepare('DELETE FROM custom_commands WHERE guild_id = ? AND trigger = ?').run(guildId, trigger.toLowerCase());
+// ── Tickets ───────────────────────────────────────────────────────────────────
+async function createTicket(channelId, guildId, userId) {
+  await db.execute({ sql: 'INSERT INTO tickets (channel_id, guild_id, user_id, created_at) VALUES (?, ?, ?, ?)', args: [channelId, guildId, userId, Date.now()] });
+}
+async function getTicket(channelId) {
+  const r = await db.execute({ sql: 'SELECT * FROM tickets WHERE channel_id = ?', args: [channelId] });
+  return first(r);
+}
+async function updateTicketStatus(channelId, status) {
+  await db.execute({ sql: 'UPDATE tickets SET status = ? WHERE channel_id = ?', args: [status, channelId] });
 }
 
-function getCustomCommand(guildId, trigger) {
-  return db.prepare('SELECT * FROM custom_commands WHERE guild_id = ? AND trigger = ?').get(guildId, trigger.toLowerCase());
+// ── Notification cache ────────────────────────────────────────────────────────
+async function hasPosted(id, platform, guildId) {
+  const r = await db.execute({ sql: 'SELECT 1 FROM notification_cache WHERE id = ? AND platform = ? AND guild_id = ?', args: [id, platform, guildId] });
+  return r.rows.length > 0;
+}
+async function markPosted(id, platform, guildId) {
+  await db.execute({ sql: 'INSERT OR IGNORE INTO notification_cache (id, platform, guild_id, posted_at) VALUES (?, ?, ?, ?)', args: [id, platform, guildId, Date.now()] });
 }
 
-function getAllCustomCommands(guildId) {
-  return db.prepare('SELECT * FROM custom_commands WHERE guild_id = ?').all(guildId);
+// ── Auto roles ────────────────────────────────────────────────────────────────
+async function addAutoRole(guildId, role_id) {
+  await db.execute({ sql: 'INSERT OR IGNORE INTO auto_roles (guild_id, role_id) VALUES (?, ?)', args: [guildId, role_id] });
+}
+async function removeAutoRole(guildId, role_id) {
+  await db.execute({ sql: 'DELETE FROM auto_roles WHERE guild_id = ? AND role_id = ?', args: [guildId, role_id] });
+}
+async function getAutoRoles(guildId) {
+  const r = await db.execute({ sql: 'SELECT role_id FROM auto_roles WHERE guild_id = ?', args: [guildId] });
+  return r.rows.map(row => row.role_id);
 }
 
-// ── Ticket helpers ───────────────────────────────────────────────────────────
-function createTicket(channelId, guildId, userId) {
-  return db.prepare('INSERT INTO tickets (channel_id, guild_id, user_id, created_at) VALUES (?, ?, ?, ?)').run(channelId, guildId, userId, Date.now());
+// ── Automod words ─────────────────────────────────────────────────────────────
+async function addBannedWord(guildId, word) {
+  await db.execute({ sql: 'INSERT OR IGNORE INTO automod_words (guild_id, word) VALUES (?, ?)', args: [guildId, word.toLowerCase()] });
+}
+async function removeBannedWord(guildId, word) {
+  await db.execute({ sql: 'DELETE FROM automod_words WHERE guild_id = ? AND word = ?', args: [guildId, word.toLowerCase()] });
+}
+async function getBannedWords(guildId) {
+  const r = await db.execute({ sql: 'SELECT word FROM automod_words WHERE guild_id = ?', args: [guildId] });
+  return r.rows.map(row => row.word);
 }
 
-function getTicket(channelId) {
-  return db.prepare('SELECT * FROM tickets WHERE channel_id = ?').get(channelId);
+// ── Command channels ──────────────────────────────────────────────────────────
+async function addCommandChannel(guildId, channelId) {
+  await db.execute({ sql: 'INSERT OR IGNORE INTO command_channels (guild_id, channel_id) VALUES (?, ?)', args: [guildId, channelId] });
 }
-
-function updateTicketStatus(channelId, status) {
-  db.prepare('UPDATE tickets SET status = ? WHERE channel_id = ?').run(status, channelId);
+async function removeCommandChannel(guildId, channelId) {
+  await db.execute({ sql: 'DELETE FROM command_channels WHERE guild_id = ? AND channel_id = ?', args: [guildId, channelId] });
 }
-
-// ── Notification cache helpers ───────────────────────────────────────────────
-function hasPosted(id, platform, guildId) {
-  return !!db.prepare('SELECT 1 FROM notification_cache WHERE id = ? AND platform = ? AND guild_id = ?').get(id, platform, guildId);
-}
-
-function markPosted(id, platform, guildId) {
-  db.prepare('INSERT OR IGNORE INTO notification_cache (id, platform, guild_id, posted_at) VALUES (?, ?, ?, ?)').run(id, platform, guildId, Date.now());
-}
-
-// ── Auto role helpers ────────────────────────────────────────────────────────
-function addAutoRole(guildId, roleId) {
-  db.prepare('INSERT OR IGNORE INTO auto_roles (guild_id, role_id) VALUES (?, ?)').run(guildId, roleId);
-}
-
-function removeAutoRole(guildId, roleId) {
-  db.prepare('DELETE FROM auto_roles WHERE guild_id = ? AND role_id = ?').run(guildId, roleId);
-}
-
-function getAutoRoles(guildId) {
-  return db.prepare('SELECT role_id FROM auto_roles WHERE guild_id = ?').all(guildId).map(r => r.role_id);
+async function getCommandChannels(guildId) {
+  const r = await db.execute({ sql: 'SELECT channel_id FROM command_channels WHERE guild_id = ?', args: [guildId] });
+  return r.rows.map(row => row.channel_id);
 }
 
 module.exports = {
-  initDatabase, getDb,
+  initDatabase,
   getConfig, setConfig, deleteConfig,
-  getUser, ensureUser, addXP, setLevel, getLeaderboard, getUserRank,
+  getUser, ensureUser, addXP, setXP, setLevel, resetAllXP, getLeaderboard, getUserRank,
   addWarning, getWarnings, clearWarnings, removeWarning,
   setBirthday, getBirthday, getTodayBirthdays,
   addVouch, getVouches, getVouchLeaderboard,
-  createAchievement, getAchievements, getUserAchievements, grantAchievement, hasAchievement,
+  createAchievement, deleteAchievement, getAchievements, getUserAchievements,
+  grantAchievement, hasAchievement, revokeUserAchievement, revokeAllUserAchievements,
   addCustomCommand, removeCustomCommand, getCustomCommand, getAllCustomCommands,
   createTicket, getTicket, updateTicketStatus,
   hasPosted, markPosted,
   addAutoRole, removeAutoRole, getAutoRoles,
+  addBannedWord, removeBannedWord, getBannedWords,
+  addCommandChannel, removeCommandChannel, getCommandChannels,
 };

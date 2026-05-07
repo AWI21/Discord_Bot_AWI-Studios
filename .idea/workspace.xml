@@ -1,9 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="9b3fc239-6a9e-49d3-b820-4d05bb0705d7" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" />
+    <list default="true" id="9b3fc239-6a9e-49d3-b820-4d05bb0705d7" name="Changes" comment="Initial bot update">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bot.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/bot.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/birthday/remember-birthday.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/birthday/remember-birthday.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/config/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/config/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/leveling/leaderboard.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/leveling/leaderboard.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/leveling/rank.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/leveling/rank.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/ban.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/ban.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/deafen.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/deafen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/kick.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/kick.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/move.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/move.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/mute.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/mute.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/purge.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/purge.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/role.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/role.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/slowmode.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/slowmode.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/timeout.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/timeout.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/warn.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/warn.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/warnings.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/warnings.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/tickets/ticket.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/tickets/ticket.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/achievements.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/achievements.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/customcmd.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/customcmd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/embed.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/embed.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/help.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/help.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/ping.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/ping.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/serverinfo.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/serverinfo.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/userinfo.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/userinfo.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/vouching/vouch.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/vouching/vouch.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/vouching/vouchlist.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/vouching/vouchlist.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/database/db.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/database/db.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/events/guildMemberAdd.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/events/guildMemberAdd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/events/interactionCreate.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/events/interactionCreate.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/events/messageCreate.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/events/messageCreate.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/events/ready.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/events/ready.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/systems/birthday.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/birthday.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/systems/leveling.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/leveling.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/systems/notifications.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/notifications.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/systems/tickets.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/tickets.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/canvas.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/canvas.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/logger.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/logger.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,6 +73,7 @@
     &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
     &quot;last_opened_file_path&quot;: &quot;D:/AWI/AWI IT/Projects/Discord Bots&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\WebStorm 2026.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -59,11 +99,30 @@
       <workItem from="1777551726679" duration="20000" />
       <workItem from="1777551764693" duration="44000" />
       <workItem from="1777551833733" duration="83000" />
-      <workItem from="1777555417214" duration="315000" />
+      <workItem from="1777555417214" duration="661000" />
+      <workItem from="1777639039586" duration="195000" />
+      <workItem from="1777655729472" duration="537000" />
+      <workItem from="1777756326535" duration="131000" />
+      <workItem from="1777905118345" duration="215000" />
+      <workItem from="1778176081666" duration="2814000" />
     </task>
+    <task id="LOCAL-00001" summary="workspace.xml and ready.js changes">
+      <option name="closed" value="true" />
+      <created>1777656258776</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1777656258776</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="workspace.xml and ready.js changes" />
+    <MESSAGE value="Initial bot update" />
+    <option name="LAST_COMMIT_MESSAGE" value="Initial bot update" />
   </component>
 </project>
