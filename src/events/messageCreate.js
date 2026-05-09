@@ -22,7 +22,7 @@ module.exports = {
       const allowedChannels = await getCommandChannels(message.guild.id);
       if (allowedChannels.length > 0 && !allowedChannels.includes(message.channel.id)) {
         const modRoleId = await getConfig(message.guild.id, 'mod_role');
-        const isMod = modRoleId ? message.member.roles.cache.has(modRoleId) : message.member.permissions.has(0x8n);
+        const isMod = modRoleId ? message.member.roles.cache.has(modRoleId) : message.member.permissions.has(8n);
         if (!isMod) {
           const msg = await message.reply({ content: `⚠️ Commands can only be used in: ${allowedChannels.map(id => `<#${id}>`).join(', ')}`, allowedMentions: { repliedUser: false } });
           setTimeout(() => { message.delete().catch(() => {}); msg.delete().catch(() => {}); }, 5000);
@@ -33,7 +33,7 @@ module.exports = {
       // Mod-only check
       if (command.modOnly) {
         const modRoleId = await getConfig(message.guild.id, 'mod_role');
-        const isMod = modRoleId ? message.member.roles.cache.has(modRoleId) : message.member.permissions.has(0x8n);
+        const isMod = modRoleId ? message.member.roles.cache.has(modRoleId) : message.member.permissions.has(8n);
         if (!isMod) return message.reply({ content: '❌ You need the **Moderator** role to use this command.', allowedMentions: { repliedUser: false } });
       }
 
@@ -63,12 +63,28 @@ module.exports = {
     // Custom commands — always allowed in any channel
     const custom = await getCustomCommand(message.guild.id, commandName);
     if (custom) {
+      // 🔒 Role Restriction Check
+      if (custom.allowed_roles) {
+        const allowedRoleIds = custom.allowed_roles.split(',');
+        const hasRequiredRole = message.member.roles.cache.some(role => allowedRoleIds.includes(role.id));
+        const isAdmin = message.member.permissions.has(8n);
+
+        if (!hasRequiredRole && !isAdmin) {
+          return message.reply({
+            content: '❌ You do not have the required role to use this custom command.',
+            allowedMentions: { repliedUser: false }
+          });
+        }
+      }
+
+      // 📝 Response Logic
       const response = custom.response
-        .replace('{user}', `<@${message.author.id}>`)
-        .replace('{username}', message.author.username)
-        .replace('{server}', message.guild.name)
-        .replace('{membercount}', message.guild.memberCount);
+          .replace('{user}', `<@${message.author.id}>`)
+          .replace('{username}', message.author.username)
+          .replace('{server}', message.guild.name)
+          .replace('{membercount}', message.guild.memberCount);
+
       await message.channel.send(response);
     }
-  },
-};
+  } // Closes execute function
+}; // Closes module.exports

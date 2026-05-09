@@ -24,7 +24,8 @@ async function initDatabase() {
     `CREATE TABLE IF NOT EXISTS vouch_log (id INTEGER PRIMARY KEY AUTOINCREMENT, target_id TEXT, guild_id TEXT, points INTEGER, given_by TEXT, timestamp INTEGER)`,
     `CREATE TABLE IF NOT EXISTS achievements (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, name TEXT, description TEXT, requirement_type TEXT, requirement_value INTEGER, reward_role_id TEXT, reward_xp INTEGER DEFAULT 0)`,
     `CREATE TABLE IF NOT EXISTS user_achievements (user_id TEXT, guild_id TEXT, achievement_id INTEGER, earned_at INTEGER, PRIMARY KEY (user_id, guild_id, achievement_id))`,
-    `CREATE TABLE IF NOT EXISTS custom_commands (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, trigger TEXT, response TEXT, UNIQUE(guild_id, trigger))`,
+    // UPDATED: Added allowed_roles column here
+    `CREATE TABLE IF NOT EXISTS custom_commands (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, trigger TEXT, response TEXT, allowed_roles TEXT, UNIQUE(guild_id, trigger))`,
     `CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT UNIQUE, guild_id TEXT, user_id TEXT, status TEXT DEFAULT 'open', created_at INTEGER)`,
     `CREATE TABLE IF NOT EXISTS notification_cache (id TEXT, platform TEXT, guild_id TEXT, posted_at INTEGER, PRIMARY KEY (id, platform, guild_id))`,
     `CREATE TABLE IF NOT EXISTS auto_roles (guild_id TEXT, role_id TEXT, PRIMARY KEY (guild_id, role_id))`,
@@ -43,6 +44,14 @@ async function initDatabase() {
         console.error(chalk.red(`   Reason: ${err.message}`));
       }
     }
+  }
+
+  // 🛠️ MIGRATION: This adds the column to your EXISTING database without breaking anything
+  try {
+    await db.execute("ALTER TABLE custom_commands ADD COLUMN allowed_roles TEXT");
+  } catch (err) {
+    // We catch the error because if the column already exists, SQLite will throw an error.
+    // We can safely ignore it.
   }
 
   console.log(chalk.green('✅ Turso database initialized'));
@@ -175,13 +184,20 @@ async function revokeAllUserAchievements(userId, guildId) {
 }
 
 // ── Custom commands ───────────────────────────────────────────────────────────
-async function addCustomCommand(guildId, trigger, response) {
-  await db.execute({ sql: 'INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response) VALUES (?, ?, ?)', args: [guildId, trigger.toLowerCase(), response] });
+// UPDATED: Now takes 'roles' as a 4th argument
+async function addCustomCommand(guildId, trigger, response, roles = []) {
+  const roleString = roles && roles.length > 0 ? roles.join(',') : null;
+  await db.execute({
+    sql: 'INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, allowed_roles) VALUES (?, ?, ?, ?)',
+    args: [guildId, trigger.toLowerCase(), response, roleString]
+  });
 }
+
 async function removeCustomCommand(guildId, trigger) {
   const r = await db.execute({ sql: 'DELETE FROM custom_commands WHERE guild_id = ? AND trigger = ?', args: [guildId, trigger.toLowerCase()] });
-  return { changes: r.rowsAffected };
+  return { changes: Number(r.rowsAffected) };
 }
+
 async function getCustomCommand(guildId, trigger) {
   const r = await db.execute({ sql: 'SELECT * FROM custom_commands WHERE guild_id = ? AND trigger = ?', args: [guildId, trigger.toLowerCase()] });
   return first(r);

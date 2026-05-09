@@ -3,7 +3,10 @@ const { EmbedBuilder } = require('discord.js');
 const { getTodayBirthdays, getConfig } = require('../database/db');
 
 function startBirthdayChecker(client) {
+  // Checks every day at midnight
   cron.schedule('0 0 * * *', () => checkBirthdays(client));
+
+  // Also runs once on startup
   checkBirthdays(client);
   console.log('🎂 Birthday checker started');
 }
@@ -16,25 +19,43 @@ async function checkBirthdays(client) {
   for (const bday of birthdays) {
     const guild = client.guilds.cache.get(bday.guild_id);
     if (!guild) continue;
+
     const channelId = await getConfig(bday.guild_id, 'birthday_channel');
     if (!channelId) continue;
+
     const channel = guild.channels.cache.get(channelId);
     if (!channel) continue;
-    let member;
-    try { member = await guild.members.fetch(bday.user_id); } catch { continue; }
 
-    const embed = new EmbedBuilder().setColor(0xf472b6).setTitle('🎂 Happy Birthday!')
-      .setDescription(`It's ${member}'s birthday today! Wish them well! 🥳🎉`)
-      .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-      .setFooter({ text: `From everyone in ${guild.name}` }).setTimestamp();
-    await channel.send({ content: `🎂 @everyone`, embeds: [embed] }).catch(() => {});
+    let member;
+    try {
+      member = await guild.members.fetch(bday.user_id);
+    } catch {
+      continue;
+    }
+
+    const embed = new EmbedBuilder()
+        .setColor(0xf472b6)
+        .setTitle('🎂 Happy Birthday!')
+        .setDescription(`It's ${member}'s birthday today! Wish them well! 🥳🎉`)
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setFooter({ text: `From everyone in ${guild.name}` })
+        .setTimestamp();
+
+    // ✅ FIXED: Changed '@everyone' to '${member}' to ping ONLY the birthday person
+    await channel.send({
+      content: `🎂 Happy Birthday ${member}!`,
+      embeds: [embed]
+    }).catch(() => {});
 
     const birthdayRoleId = await getConfig(bday.guild_id, 'birthday_role');
     if (birthdayRoleId) {
       const role = guild.roles.cache.get(birthdayRoleId);
       if (role) {
         await member.roles.add(role).catch(() => {});
-        setTimeout(async () => { await member.roles.remove(role).catch(() => {}); }, 24 * 60 * 60 * 1000);
+        // Removes the role after 24 hours
+        setTimeout(async () => {
+          await member.roles.remove(role).catch(() => {});
+        }, 24 * 60 * 60 * 1000);
       }
     }
   }
