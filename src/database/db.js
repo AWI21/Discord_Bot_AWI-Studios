@@ -82,10 +82,23 @@ async function getUser(userId, guildId) {
 async function ensureUser(userId, guildId) {
   await db.execute({ sql: 'INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?, ?)', args: [userId, guildId] });
 }
-async function addXP(userId, guildId, amount) {
-  await ensureUser(userId, guildId);
-  await db.execute({ sql: 'UPDATE users SET xp = xp + ?, messages = messages + 1 WHERE user_id = ? AND guild_id = ?', args: [amount, userId, guildId] });
-  return getUser(userId, guildId);
+// ⚡ OPTIMIZATION: One query instead of two
+async function addXP(userId, guild_id, amount) {
+  await db.execute({
+    sql: `INSERT INTO users (user_id, guild_id, xp, messages, level) 
+          VALUES (?, ?, ?, 1, 0) 
+          ON CONFLICT(user_id, guild_id) 
+          DO UPDATE SET xp = xp + ?, messages = messages + 1`,
+    args: [userId, guild_id, amount, amount]
+  });
+  // If you don't NEED the user object back immediately for a level-up message,
+  // don't call getUser() here.
+}
+
+// ── Helper: get first row ────────────────────────────────────────────────────
+// ⚡ OPTIMIZATION: Pre-map rows to be cleaner
+function first(result) {
+  return result.rows && result.rows.length > 0 ? result.rows[0] : null;
 }
 async function setXP(userId, guildId, amount) {
   await ensureUser(userId, guildId);
