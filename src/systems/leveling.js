@@ -12,7 +12,7 @@ async function handleXP(message, client) {
   const key = `${message.author.id}-${message.guild.id}`;
   if (client.xpCooldowns.has(key)) return;
   client.xpCooldowns.set(key, true);
-  setTimeout(() => client.xpCooldowns.delete(key), 60_000);
+  setTimeout(() => client.xpCooldowns.delete(key), 30_000);
 
   // 1. Get the data BEFORE updating
   const oldData = await getUser(message.author.id, message.guild.id);
