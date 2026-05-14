@@ -57,9 +57,19 @@ async function handleLevelUp(message, client, newLevel, totalXp) {
     }
   }
 
+// Replace the old channel lookup with this:
   const levelChannelId = await getConfig(guild.id, 'level_channel');
-  const targetChannel = levelChannelId ? guild.channels.cache.get(levelChannelId) : message.channel;
-  if (!targetChannel) return;
+  let targetChannel = message.channel; // Default to current channel
+
+  if (levelChannelId) {
+    // Clean the ID just in case it has <# > symbols
+    const cleanId = levelChannelId.replace(/[<#>]/g, '');
+
+    // Try cache first, then fetch from Discord API
+    targetChannel = guild.channels.cache.get(cleanId) ||
+        await guild.channels.fetch(cleanId).catch(() => null) ||
+        message.channel;
+  }
 
   const embed = new EmbedBuilder()
     .setColor(0x7c3aed).setTitle('🎉 Level Up!')
@@ -95,9 +105,9 @@ async function checkAchievements(message, client, userData) {
 
 async function notifyAchievement(message, client, achievement) {
   const embed = new EmbedBuilder()
-    .setColor(0xf59e0b).setTitle('🏆 Achievement Unlocked!')
-    .setDescription(`Milestone reached! ${message.author}, you just unlocked the ${achievement.name} achievement! 🏆\n> ${achievement.description}`)
-    .setThumbnail(message.author.displayAvatarURL({ dynamic: true })).setTimestamp();
+      .setColor(0xf59e0b).setTitle('🏆 Achievement Unlocked!')
+      .setDescription(`Milestone reached! ${message.author}, you just unlocked the ${achievement.name} achievement! 🏆\n> ${achievement.description}`)
+      .setThumbnail(message.author.displayAvatarURL({ dynamic: true })).setTimestamp();
 
   if (achievement.reward_role_id) {
     const role = message.guild.roles.cache.get(achievement.reward_role_id);
@@ -105,13 +115,24 @@ async function notifyAchievement(message, client, achievement) {
     if (role && member) await member.roles.add(role).catch(() => {});
     embed.addFields({ name: '🎖️ Role Reward', value: `<@&${achievement.reward_role_id}>`, inline: true });
   }
+
   if (achievement.reward_xp > 0) {
     await addXP(message.author.id, message.guild.id, achievement.reward_xp);
     embed.addFields({ name: '⭐ XP Reward', value: `+${achievement.reward_xp} XP`, inline: true });
   }
 
+  // --- ROBUST CHANNEL LOOKUP ---
   const levelChannelId = await getConfig(message.guild.id, 'level_channel');
-  const ch = levelChannelId ? message.guild.channels.cache.get(levelChannelId) : message.channel;
+  let ch = message.channel;
+
+  if (levelChannelId) {
+    const cleanId = levelChannelId.replace(/[<#>]/g, '');
+    ch = message.guild.channels.cache.get(cleanId) ||
+        await message.guild.channels.fetch(cleanId).catch(() => null) ||
+        message.channel;
+  }
+  // -----------------------------
+
   if (ch) await ch.send({ content: `🏆 ${message.author}`, embeds: [embed] }).catch(() => {});
 }
 
