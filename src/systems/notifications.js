@@ -31,12 +31,14 @@ async function pollAll(client) {
 //   yt_ping_role (single role pings for all YT channels)
 
 async function pollYouTube(client, guild) {
-  const channelIdsRaw = getConfig(guild.id, 'yt_channel_id');
-  const notifChannelId = getConfig(guild.id, 'yt_notif_channel');
+  const channelIdsRaw = await getConfig(guild.id, 'yt_channel_id');
+  const notifChannelId = await getConfig(guild.id, 'yt_notif_channel');
 
   if (!channelIdsRaw || !notifChannelId) return;
 
-  const discordChannel = guild.channels.cache.get(notifChannelId);
+  const discordChannel = guild.channels.cache.get(notifChannelId) ||
+      await guild.channels.fetch(notifChannelId).catch(() => null);
+
   if (!discordChannel) {
     console.warn(`[YouTube] Discord channel ${notifChannelId} not found in guild ${guild.name}`);
     return;
