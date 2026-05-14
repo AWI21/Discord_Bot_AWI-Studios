@@ -14,10 +14,16 @@ async function handleXP(message, client) {
   client.xpCooldowns.set(key, true);
   setTimeout(() => client.xpCooldowns.delete(key), 60_000);
 
+  // 1. Get the data BEFORE updating
+  const oldData = await getUser(message.author.id, message.guild.id);
+  const oldLevel = oldData ? calculateLevel(oldData.xp) : 0;
+
+  // 2. Update the XP
   const userData = await addXP(message.author.id, message.guild.id, XP_PER_MESSAGE);
   const newLevel = calculateLevel(userData.xp);
 
-  if (newLevel > userData.level) {
+  // 3. Compare New vs Old
+  if (newLevel > oldLevel) {
     await setLevel(message.author.id, message.guild.id, newLevel);
     await handleLevelUp(message, client, newLevel, userData.xp);
   }
