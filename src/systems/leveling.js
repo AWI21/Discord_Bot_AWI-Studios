@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { addXP, setLevel, getConfig, getAchievements, grantAchievement, hasAchievement } = require('../database/db');
+const { getUser, addXP, setLevel, getConfig, getAchievements, grantAchievement, hasAchievement } = require('../database/db');
 
 const LEVEL_ROLES = [5, 10, 20, 30, 40, 50];
 const XP_PER_MESSAGE = 4;
@@ -14,15 +14,18 @@ async function handleXP(message, client) {
   client.xpCooldowns.set(key, true);
   setTimeout(() => client.xpCooldowns.delete(key), 30_000);
 
-  // 1. Get the data BEFORE updating
-  const oldData = await getUser(message.author.id, message.guild.id);
-  const oldLevel = oldData ? calculateLevel(oldData.xp) : 0;
+  // 1. Get current data
+  let userData = await getUser(message.author.id, message.guild.id);
+  const oldLevel = userData ? calculateLevel(userData.xp) : 0;
 
-  // 2. Update the XP
-  const userData = await addXP(message.author.id, message.guild.id, XP_PER_MESSAGE);
+  // 2. Update the XP in DB
+  await addXP(message.author.id, message.guild.id, XP_PER_MESSAGE);
+
+  // 3. Get the UPDATED data to see the new stats
+  userData = await getUser(message.author.id, message.guild.id);
   const newLevel = calculateLevel(userData.xp);
 
-  // 3. Compare New vs Old
+  // 4. Compare
   if (newLevel > oldLevel) {
     await setLevel(message.author.id, message.guild.id, newLevel);
     await handleLevelUp(message, client, newLevel, userData.xp);
