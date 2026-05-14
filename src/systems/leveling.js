@@ -54,7 +54,7 @@ async function handleLevelUp(message, client, newLevel, totalXp) {
 
   const embed = new EmbedBuilder()
     .setColor(0x7c3aed).setTitle('🎉 Level Up!')
-    .setDescription(`${message.author} has reached **Level ${newLevel}**! 🐺`)
+    .setDescription(`Level UP! ${message.author}, you just ranked up and reached Level ${newLevel}! 🐺`)
     .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
     .setFooter({ text: `Total XP: ${totalXp.toLocaleString()}` }).setTimestamp();
 
@@ -87,7 +87,7 @@ async function checkAchievements(message, client, userData) {
 async function notifyAchievement(message, client, achievement) {
   const embed = new EmbedBuilder()
     .setColor(0xf59e0b).setTitle('🏆 Achievement Unlocked!')
-    .setDescription(`${message.author} earned **${achievement.name}**!\n${achievement.description}`)
+    .setDescription(`Milestone reached! ${message.author}, you just unlocked the ${achievement.name} achievement! 🏆\n> ${achievement.description}`)
     .setThumbnail(message.author.displayAvatarURL({ dynamic: true })).setTimestamp();
 
   if (achievement.reward_role_id) {

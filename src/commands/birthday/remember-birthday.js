@@ -34,6 +34,6 @@ module.exports = {
 
 function buildEmbed(user, month, day) {
   return new EmbedBuilder().setColor(0xf472b6).setTitle('🎂 Birthday Saved!')
-    .setDescription(`Your birthday has been set to **${MONTHS[month - 1]} ${day}**. I'll celebrate with you! 🥳`)
+    .setDescription(`Your birthday has been set to **${MONTHS[month - 1]} ${day}**. I'll celebrate it with you! 🥳`)
     .setThumbnail(user.displayAvatarURL({ dynamic: true })).setTimestamp();
 }

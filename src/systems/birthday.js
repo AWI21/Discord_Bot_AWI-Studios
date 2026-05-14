@@ -36,7 +36,7 @@ async function checkBirthdays(client) {
     const embed = new EmbedBuilder()
         .setColor(0xf472b6)
         .setTitle('🎂 Happy Birthday!')
-        .setDescription(`It's ${member}'s birthday today! Wish them well! 🥳🎉`)
+        .setDescription(`Attention pack! It's ${member}'s birthday today! Go wish them well! 🥳🎉`)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
         .setFooter({ text: `From everyone in ${guild.name}` })
         .setTimestamp();

@@ -103,7 +103,7 @@ async function pollYouTube(client, guild) {
 
       const embed = new EmbedBuilder()
         .setColor(0xff0000)
-        .setTitle('🎥 New YouTube Video!')
+        .setTitle('Hey pack! Wolfazi just posted a video! Go check it out! 🎬')
         .setDescription(`**[${title}](${link})**`)
         .setImage(thumbnail)
         .setAuthor({ name: author, iconURL: 'https://www.youtube.com/favicon.ico', url: `https://www.youtube.com/channel/${ytChannelId}` })
@@ -176,7 +176,7 @@ async function pollTwitch(client, guild) {
 
       const embed = new EmbedBuilder()
         .setColor(0x9146ff)
-        .setTitle(`🔴 ${twitchUser} is LIVE on Twitch!`)
+        .setTitle(`🔴 Hey pack! ${twitchUser} is LIVE on Twitch!`)
         .setDescription(`**${stream.title}**\nPlaying: **${stream.game_name}**\n\n[Watch Live](https://twitch.tv/${twitchUser})`)
         .addFields({ name: '👥 Viewers', value: String(stream.viewer_count), inline: true })
         .setImage(stream.thumbnail_url.replace('{width}', '1280').replace('{height}', '720'))
