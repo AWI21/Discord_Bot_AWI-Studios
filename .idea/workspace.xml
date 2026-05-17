@@ -3,6 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="9b3fc239-6a9e-49d3-b820-4d05bb0705d7" name="Changes" comment="Initial bot update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bot.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/systems/notifications.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/notifications.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -69,7 +70,9 @@
       <workItem from="1778176081666" duration="2814000" />
       <workItem from="1778309269472" duration="8446000" />
       <workItem from="1778776732548" duration="7890000" />
-      <workItem from="1778790451388" duration="46000" />
+      <workItem from="1778790451388" duration="267000" />
+      <workItem from="1778925010327" duration="72000" />
+      <workItem from="1779016162344" duration="1421000" />
     </task>
     <task id="LOCAL-00001" summary="workspace.xml and ready.js changes">
       <option name="closed" value="true" />

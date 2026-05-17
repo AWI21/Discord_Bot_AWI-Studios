@@ -22,20 +22,14 @@ async function pollAll(client) {
 }
 
 // ── YouTube ───────────────────────────────────────────────────────────────────
-// Supports multiple channel IDs separated by commas:
-//   !config yt-channel-id UCaaa,UCbbb,UCccc
-// Each channel gets its OWN notif channel config:
-//   yt_notif_channel      (default for all)
-//   yt_notif_channel_2    (optional per-channel overrides if needed)
-// Ping role:
-//   yt_ping_role (single role pings for all YT channels)
-
 async function pollYouTube(client, guild) {
-  const channelIdsRaw = await getConfig(guild.id, 'yt_channel_id');
-  const notifChannelId = await getConfig(guild.id, 'yt_notif_channel');
+  // FIXED: Changed underscores to dashes to match DB
+  const channelIdsRaw = await getConfig(guild.id, 'yt-channel-id');
+  const notifChannelId = await getConfig(guild.id, 'yt-notif-channel');
 
   if (!channelIdsRaw || !notifChannelId) return;
 
+  // FIXED: Robust channel cache + API fetch lookup
   const discordChannel = guild.channels.cache.get(notifChannelId) ||
       await guild.channels.fetch(notifChannelId).catch(() => null);
 
@@ -44,7 +38,6 @@ async function pollYouTube(client, guild) {
     return;
   }
 
-  // Support multiple YouTube channel IDs comma-separated
   const ytChannelIds = channelIdsRaw.split(',').map(s => s.trim()).filter(Boolean);
 
   for (const ytChannelId of ytChannelIds) {
@@ -54,13 +47,11 @@ async function pollYouTube(client, guild) {
       const res = await axios.get(url, {
         timeout: 15000,
         headers: {
-          // Spoof a real browser to avoid YouTube blocking cloud IPs
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'application/rss+xml,application/xml,text/xml,*/*',
           'Accept-Language': 'en-US,en;q=0.9',
           'Cache-Control': 'no-cache',
         },
-        // Don't throw on 4xx/5xx — handle manually so we can log the status
         validateStatus: () => true,
       });
 
@@ -74,13 +65,11 @@ async function pollYouTube(client, guild) {
         parsed = await xml2js.parseStringPromise(res.data);
       } catch (parseErr) {
         console.error(`[YouTube] XML parse error for ${ytChannelId}: ${parseErr.message}`);
-        console.error(`[YouTube] Raw response (first 500 chars): ${String(res.data).substring(0, 500)}`);
         continue;
       }
 
       const entries = parsed?.feed?.entry || [];
       if (!entries.length) {
-        console.log(`[YouTube] No entries found for channel ${ytChannelId} — channel may be empty or ID wrong`);
         continue;
       }
 
@@ -91,8 +80,8 @@ async function pollYouTube(client, guild) {
         continue;
       }
 
-      // Already posted — skip
-      if (hasPosted(videoId, 'youtube', guild.id)) continue;
+      // FIXED: Added await so it doesn't think everything is already posted
+      if (await hasPosted(videoId, 'youtube', guild.id)) continue;
 
       const title = latest.title?.[0] || 'New Video';
       const link = latest.link?.[0]?.$?.href || `https://www.youtube.com/watch?v=${videoId}`;
@@ -100,22 +89,24 @@ async function pollYouTube(client, guild) {
       const thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       const published = latest.published?.[0];
 
-      const pingRole = getConfig(guild.id, 'yt_ping_role');
+      // FIXED: Added await and changed to dash format
+      const pingRole = await getConfig(guild.id, 'yt-ping-role');
       const pingContent = pingRole ? `<@&${pingRole}> ` : '';
 
       const embed = new EmbedBuilder()
-        .setColor(0xff0000)
-        .setTitle('Hey pack! Wolfazi just posted a video! Go check it out! 🎬')
-        .setDescription(`**[${title}](${link})**`)
-        .setImage(thumbnail)
-        .setAuthor({ name: author, iconURL: 'https://www.youtube.com/favicon.ico', url: `https://www.youtube.com/channel/${ytChannelId}` })
-        .addFields({ name: '📺 Watch Now', value: link })
-        .setFooter({ text: 'YouTube Notification' })
-        .setTimestamp(published ? new Date(published) : new Date());
+          .setColor(0xff0000)
+          .setTitle('Hey pack! Wolfazi just posted a video! Go check it out! 🎬')
+          .setDescription(`**[${title}](${link})**`)
+          .setImage(thumbnail)
+          .setAuthor({ name: author, iconURL: 'https://www.youtube.com/favicon.ico', url: `https://www.youtube.com/channel/${ytChannelId}` })
+          .addFields({ name: '📺 Watch Now', value: link })
+          .setFooter({ text: 'YouTube Notification' })
+          .setTimestamp(published ? new Date(published) : new Date());
 
-      // Send FIRST, then mark as posted — so a failed send doesn't permanently skip the video
       await discordChannel.send({ content: `${pingContent}🎥 **${author}** just uploaded a new video!`, embeds: [embed] });
-      markPosted(videoId, 'youtube', guild.id);
+
+      // FIXED: Added await
+      await markPosted(videoId, 'youtube', guild.id);
 
       console.log(`[YouTube] ✅ Posted "${title}" (${videoId}) for guild ${guild.name}`);
 
@@ -126,18 +117,18 @@ async function pollYouTube(client, guild) {
 }
 
 // ── Twitch ────────────────────────────────────────────────────────────────────
-// Supports multiple Twitch usernames comma-separated:
-//   !config twitch-username streamer1,streamer2
 async function pollTwitch(client, guild) {
-  const twitchUsersRaw = getConfig(guild.id, 'twitch_username');
-  const notifChannelId = getConfig(guild.id, 'twitch_notif_channel');
+  // FIXED: Added await and changed to dash format
+  const twitchUsersRaw = await getConfig(guild.id, 'twitch-username');
+  const notifChannelId = await getConfig(guild.id, 'twitch-notif-channel');
   if (!twitchUsersRaw || !notifChannelId) return;
   if (!process.env.TWITCH_CLIENT_ID || !process.env.TWITCH_CLIENT_SECRET) return;
 
-  const discordChannel = guild.channels.cache.get(notifChannelId);
+  // FIXED: Robust channel fetch strategy
+  const discordChannel = guild.channels.cache.get(notifChannelId) ||
+      await guild.channels.fetch(notifChannelId).catch(() => null);
   if (!discordChannel) return;
 
-  // Get app access token (one token for all usernames)
   let token;
   try {
     const tokenRes = await axios.post('https://id.twitch.tv/oauth2/token', null, {
@@ -171,22 +162,27 @@ async function pollTwitch(client, guild) {
       if (!stream) continue; // offline
 
       const streamKey = `twitch_${stream.id}`;
-      if (hasPosted(streamKey, 'twitch', guild.id)) continue;
 
-      const pingRole = getConfig(guild.id, 'twitch_ping_role');
+      // FIXED: Added await
+      if (await hasPosted(streamKey, 'twitch', guild.id)) continue;
+
+      // FIXED: Added await and changed to dash format
+      const pingRole = await getConfig(guild.id, 'twitch-ping-role');
       const ping = pingRole ? `<@&${pingRole}> ` : '';
 
       const embed = new EmbedBuilder()
-        .setColor(0x9146ff)
-        .setTitle(`🔴 Hey pack! ${twitchUser} is LIVE on Twitch!`)
-        .setDescription(`**${stream.title}**\nPlaying: **${stream.game_name}**\n\n[Watch Live](https://twitch.tv/${twitchUser})`)
-        .addFields({ name: '👥 Viewers', value: String(stream.viewer_count), inline: true })
-        .setImage(stream.thumbnail_url.replace('{width}', '1280').replace('{height}', '720'))
-        .setFooter({ text: 'Twitch Notification' })
-        .setTimestamp();
+          .setColor(0x9146ff)
+          .setTitle(`🔴 Hey pack! ${twitchUser} is LIVE on Twitch!`)
+          .setDescription(`**${stream.title}**\nPlaying: **${stream.game_name}**\n\n[Watch Live](https://twitch.tv/${twitchUser})`)
+          .addFields({ name: '👥 Viewers', value: String(stream.viewer_count), inline: true })
+          .setImage(stream.thumbnail_url.replace('{width}', '1280').replace('{height}', '720'))
+          .setFooter({ text: 'Twitch Notification' })
+          .setTimestamp();
 
       await discordChannel.send({ content: `${ping}🔴 **${twitchUser}** just went live!`, embeds: [embed] });
-      markPosted(streamKey, 'twitch', guild.id);
+
+      // FIXED: Added await
+      await markPosted(streamKey, 'twitch', guild.id);
 
       console.log(`[Twitch] ✅ Posted live notification for ${twitchUser} in guild ${guild.name}`);
     } catch (err) {
@@ -197,12 +193,12 @@ async function pollTwitch(client, guild) {
 
 // ── TikTok placeholder ────────────────────────────────────────────────────────
 async function pollTikTok(client, guild) {
-  if (!getConfig(guild.id, 'tiktok_notif_channel') || !process.env.TIKTOK_ACCESS_TOKEN) return;
+  if (!await getConfig(guild.id, 'tiktok-notif-channel') || !process.env.TIKTOK_ACCESS_TOKEN) return;
 }
 
 // ── Instagram placeholder ──────────────────────────────────────────────────────
 async function pollInstagram(client, guild) {
-  if (!getConfig(guild.id, 'instagram_notif_channel') || !process.env.INSTAGRAM_ACCESS_TOKEN) return;
+  if (!await getConfig(guild.id, 'instagram-notif-channel') || !process.env.INSTAGRAM_ACCESS_TOKEN) return;
 }
 
 module.exports = { startNotificationPoller };
