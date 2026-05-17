@@ -149,16 +149,76 @@ module.exports = {
     }
 
     if (sub === 'view' || sub === 'show') {
-      const allKeys = [
-        ...Object.entries({ 'log-channel': 'log_channel', 'level-channel': 'level_channel', 'birthday-channel': 'birthday_channel', 'welcome-channel': 'welcome_channel' }),
-        ...Object.entries({ 'mod-role': 'mod_role', 'birthday-role': 'birthday_role', 'trusted-fan-role': 'trusted_fan_role' }),
-        ...Object.entries({ 'prefix': 'prefix', 'yt-channel-id': 'yt_channel_id', 'twitch-username': 'twitch_username' }),
-      ];
-      const lines = await Promise.all(allKeys.map(async ([label, key]) => {
-        const val = await getConfig(message.guild.id, key);
-        return `**${label}:** ${val ? (key.includes('channel') ? `<#${val}>` : key.includes('role') ? `<@&${val}>` : `\`${val}\``) : '_not set_'}`;
-      }));
-      return message.reply({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setTitle('⚙️ Current Config').setDescription(lines.join('\n'))] });
+      const categories = {
+        '📢 Channels': {
+          'log-channel': 'log_channel', 'level-channel': 'level_channel',
+          'birthday-channel': 'birthday_channel', 'welcome-channel': 'welcome_channel',
+          'yt-channel-notify': 'yt_notif_channel', 'twitch-channel': 'twitch_notif_channel',
+          'ticket-category': 'ticket_category'
+        },
+        '🎖️ Roles': {
+          'mod-role': 'mod_role', 'birthday-role': 'birthday_role', 'trusted-fan-role': 'trusted_fan_role',
+          'yt-ping-role': 'yt_ping_role', 'twitch-ping-role': 'twitch_ping_role',
+          'level-role-5': 'level_role_5', 'level-role-10': 'level_role_10',
+          'level-role-20': 'level_role_20', 'level-role-30': 'level_role_30',
+          'level-role-40': 'level_role_40', 'level-role-50': 'level_role_50'
+        },
+        '🔧 Values': {
+          'prefix': 'prefix', 'yt-channel-id': 'yt_channel_id', 'twitch-username': 'twitch_username',
+          'tiktok-username': 'tiktok_username', 'instagram-username': 'instagram_username',
+          'trusted-fan-threshold': 'trusted_fan_threshold'
+        }
+      };
+
+      const embed = new EmbedBuilder()
+          .setColor(0x7c3aed)
+          .setTitle(`⚙️ Current Config for ${message.guild.name}`)
+          .setTimestamp();
+
+      for (const [categoryName, keys] of Object.entries(categories)) {
+        const lines = await Promise.all(
+            Object.entries(keys).map(async ([label, key]) => {
+              const val = await getConfig(message.guild.id, key);
+              if (!val || val === 'not set') return `**${label}:** _not set_`;
+
+              if (key.includes('channel') || key.includes('category')) {
+                return `**${label}:** <#${val}>`;
+              } else if (key.includes('role')) {
+                return `**${label}:** <@&${val}>`;
+              } else {
+                return `**${label}:** \`${val}\``;
+              }
+            })
+        );
+
+        const filteredLines = lines.filter(Boolean).join('\n').trim();
+        embed.addFields({
+          name: categoryName,
+          value: filteredLines.length > 0 ? filteredLines : 'No setups found.',
+          inline: false
+        });
+      }
+
+      const autoRoles = (await getAutoRoles(message.guild.id)) || [];
+      const bannedWords = (await getBannedWords(message.guild.id)) || [];
+      const rawLinks = await getConfig(message.guild.id, 'allowed_link_channels') || '';
+      const linkChannels = rawLinks.split(',').map(s => s.trim()).filter(Boolean);
+      const cmdChannels = (await getCommandChannels(message.guild.id)) || [];
+
+      const listContent = [
+        `**Auto Roles:** ${autoRoles.length ? autoRoles.map(id => `<@&${id}>`).join(', ') : '_None_'}`,
+        `**Allowed Link Channels:** ${linkChannels.length ? linkChannels.map(id => `<#${id}>`).join(', ') : '_None (Blocked)_'}`,
+        `**Restricted Command Channels:** ${cmdChannels.length ? cmdChannels.map(id => `<#${id}>`).join(', ') : '_None (Global)_'}`,
+        `**Banned Words Count:** \`${bannedWords.length}\` active strings`
+      ].join('\n');
+
+      embed.addFields({
+        name: '🛡️ Lists & System Status',
+        value: listContent.length > 0 ? listContent : 'No active statuses.',
+        inline: false
+      });
+
+      return message.reply({ embeds: [embed] });
     }
 
     showHelp(message, prefix);
@@ -167,13 +227,13 @@ module.exports = {
 
 function showHelp(message, prefix) {
   const embed = new EmbedBuilder().setColor(0x7c3aed).setTitle('⚙️ Config Commands')
-    .addFields(
-      { name: '📢 Channels', value: `\`${prefix}config log-channel\` \`${prefix}config level-channel\`\n\`${prefix}config birthday-channel\` \`${prefix}config welcome-channel\`\n\`${prefix}config yt-channel-notify\` \`${prefix}config twitch-channel\`\n\`${prefix}config ticket-category\`` },
-      { name: '🎖️ Roles', value: `\`${prefix}config birthday-role\` \`${prefix}config mod-role\`\n\`${prefix}config trusted-fan-role\` \`${prefix}config level-role-5\` (also 10,20,30,40,50)\n\`${prefix}config yt-ping-role\` \`${prefix}config twitch-ping-role\`` },
-      { name: '🔧 Values', value: `\`${prefix}config prefix <symbol>\`\n\`${prefix}config yt-channel-id <id>\` \`${prefix}config twitch-username <name>\`\n\`${prefix}config trusted-fan-threshold <number>\`` },
-      { name: '🚫 AutoMod', value: `\`${prefix}config bannedword add/remove/list <word>\`\n\`${prefix}config allowlinks add/remove/list #channel\`` },
-      { name: '💬 Command Channels', value: `\`${prefix}config cmdchannel add/remove/list #channel\`` },
-      { name: '🤖 Bot', value: `\`${prefix}config status WATCHING <text>\`\n\`${prefix}config autorole add/remove/list\`\n\`${prefix}config view\`` },
-    );
+      .addFields(
+          { name: '📢 Channels', value: `\`${prefix}config log-channel\` \`${prefix}config level-channel\`\n\`${prefix}config birthday-channel\` \`${prefix}config welcome-channel\`\n\`${prefix}config yt-channel-notify\` \`${prefix}config twitch-channel\`\n\`${prefix}config ticket-category\`` },
+          { name: '🎖️ Roles', value: `\`${prefix}config birthday-role\` \`${prefix}config mod-role\`\n\`${prefix}config trusted-fan-role\` \`${prefix}config level-role-5\` (also 10,20,30,40,50)\n\`${prefix}config yt-ping-role\` \`${prefix}config twitch-ping-role\`` },
+          { name: '🔧 Values', value: `\`${prefix}config prefix <symbol>\`\n\`${prefix}config yt-channel-id <id>\` \`${prefix}config twitch-username <name>\`\n\`${prefix}config trusted-fan-threshold <number>\`` },
+          { name: '🚫 AutoMod', value: `\`${prefix}config bannedword add/remove/list <word>\`\n\`${prefix}config allowlinks add/remove/list #channel\`` },
+          { name: '💬 Command Channels', value: `\`${prefix}config cmdchannel add/remove/list #channel\`` },
+          { name: '🤖 Bot', value: `\`${prefix}config status WATCHING <text>\`\n\`${prefix}config autorole add/remove/list\`\n\`${prefix}config view\`` },
+      );
   message.reply({ embeds: [embed] });
 }
