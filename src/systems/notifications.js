@@ -25,7 +25,7 @@ async function pollAll(client) {
 async function pollYouTube(client, guild) {
   // FIXED: Changed underscores to dashes to match DB
   const channelIdsRaw = await getConfig(guild.id, 'yt-channel-id');
-  const notifChannelId = await getConfig(guild.id, 'yt-notif-channel');
+  const notifChannelId = await getConfig(guild.id, 'yt-channel-notify');
 
   if (!channelIdsRaw || !notifChannelId) return;
 
@@ -120,7 +120,7 @@ async function pollYouTube(client, guild) {
 async function pollTwitch(client, guild) {
   // FIXED: Added await and changed to dash format
   const twitchUsersRaw = await getConfig(guild.id, 'twitch-username');
-  const notifChannelId = await getConfig(guild.id, 'twitch-notif-channel');
+  const notifChannelId = await getConfig(guild.id, 'twitch-channel');
   if (!twitchUsersRaw || !notifChannelId) return;
   if (!process.env.TWITCH_CLIENT_ID || !process.env.TWITCH_CLIENT_SECRET) return;
 
