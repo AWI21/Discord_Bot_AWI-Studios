@@ -181,7 +181,8 @@ module.exports = {
               const val = await getConfig(message.guild.id, key);
               if (!val || val === 'not set') return `**${label}:** _not set_`;
 
-              if (key.includes('channel') || key.includes('category')) {
+              // FIXED: Added check to ignore 'channel_id' so string values aren't bracket-wrapped
+              if ((key.includes('channel') || key.includes('category')) && !key.includes('channel_id')) {
                 return `**${label}:** <#${val}>`;
               } else if (key.includes('role')) {
                 return `**${label}:** <@&${val}>`;
