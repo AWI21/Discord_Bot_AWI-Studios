@@ -3,29 +3,48 @@ const { getUser, addXP, setLevel, getConfig, getAchievements, grantAchievement, 
 
 const LEVEL_ROLES = [5, 10, 20, 30, 40, 50];
 const XP_PER_MESSAGE = 4;
-const XP_PER_LEVEL = 80;
 
-function calculateLevel(totalXp) { return Math.floor(totalXp / XP_PER_LEVEL); }
-function xpForNextLevel(level) { return (level + 1) * XP_PER_LEVEL; }
+function calculateLevel(totalXp) {
+  let level = 0;
+  let xpNeededForNext = 120;
+  let accumulatedXp = 0;
 
+  while (totalXp >= accumulatedXp + xpNeededForNext) {
+    accumulatedXp += xpNeededForNext;
+    level++;
+    xpNeededForNext += 60; // Scaling factor: +60 each time
+  }
+  return level;
+}
+
+function totalXpForLevel(level) {
+  let total = 0;
+  let currentLevelRequirement = 120;
+  for (let i = 0; i < level; i++) {
+    total += currentLevelRequirement;
+    currentLevelRequirement += 60;
+  }
+  return total;
+}
+
+function xpForNextLevel(level) {
+  return totalXpForLevel(level + 1);
+}
 async function handleXP(message, client) {
   const key = `${message.author.id}-${message.guild.id}`;
   if (client.xpCooldowns.has(key)) return;
   client.xpCooldowns.set(key, true);
   setTimeout(() => client.xpCooldowns.delete(key), 15_000);
 
-  // 1. Get current data
   let userData = await getUser(message.author.id, message.guild.id);
   const oldLevel = userData ? calculateLevel(userData.xp) : 0;
 
-  // 2. Update the XP in DB
   await addXP(message.author.id, message.guild.id, XP_PER_MESSAGE);
 
   // 3. Get the UPDATED data to see the new stats
   userData = await getUser(message.author.id, message.guild.id);
   const newLevel = calculateLevel(userData.xp);
 
-  // 4. Compare
   if (newLevel > oldLevel) {
     await setLevel(message.author.id, message.guild.id, newLevel);
     await handleLevelUp(message, client, newLevel, userData.xp);
@@ -136,4 +155,4 @@ async function notifyAchievement(message, client, achievement) {
   if (ch) await ch.send({ content: `🏆 ${message.author}`, embeds: [embed] }).catch(() => {});
 }
 
-module.exports = { handleXP, calculateLevel, xpForNextLevel, XP_PER_LEVEL };
+module.exports = { handleXP, calculateLevel, xpForNextLevel };
