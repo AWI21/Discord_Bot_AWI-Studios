@@ -3,7 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="9b3fc239-6a9e-49d3-b820-4d05bb0705d7" name="Changes" comment="Initial bot update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/systems/leveling.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/leveling.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/leveling/rank.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/leveling/rank.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/canvas.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/canvas.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -75,7 +76,7 @@
       <workItem from="1779026251632" duration="978000" />
       <workItem from="1779115594209" duration="667000" />
       <workItem from="1779125176792" duration="325000" />
-      <workItem from="1779215031728" duration="623000" />
+      <workItem from="1779215031728" duration="1216000" />
     </task>
     <task id="LOCAL-00001" summary="workspace.xml and ready.js changes">
       <option name="closed" value="true" />

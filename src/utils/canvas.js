@@ -1,5 +1,4 @@
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
-const { XP_PER_LEVEL } = require('../systems/leveling');
 
 const CARD_WIDTH = 934;
 const CARD_HEIGHT = 282;
@@ -12,7 +11,8 @@ const COLORS = {
   textMuted: '#6b6b80', avatarBorder: '#7c3aed',
 };
 
-async function generateLevelCard({ user, xp, level, rank }) {
+// Updated signature to accept nextLevelXp (the target width) alongside the progress xp
+async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }) {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const ctx = canvas.getContext('2d');
 
@@ -61,17 +61,15 @@ async function generateLevelCard({ user, xp, level, rank }) {
   ctx.font = 'bold 36px sans-serif'; ctx.fillStyle = COLORS.textPrimary;
   ctx.fillText(user.username, contentX, 80);
 
-  // XP progress
-  const xpInLevel = xp % XP_PER_LEVEL;
-  const xpNeeded = XP_PER_LEVEL;
+  // Dynamic XP Progress Math 📈
   ctx.font = '22px sans-serif'; ctx.fillStyle = COLORS.textSecondary;
-  const xpText = `${xpInLevel} / ${xpNeeded} XP`;
+  const xpText = `${xp} / ${nextLevelXp} XP`;
   const xpTextWidth = ctx.measureText(xpText).width;
   ctx.fillText(xpText, CARD_WIDTH - xpTextWidth - 40, 80);
 
   // XP Bar
   const barY = 110, barHeight = 28, barX = contentX, barWidth = contentWidth;
-  const progress = Math.min(xpInLevel / xpNeeded, 1);
+  const progress = Math.min(xp / nextLevelXp, 1);
   ctx.fillStyle = COLORS.barBg; roundRect(ctx, barX, barY, barWidth, barHeight, 14); ctx.fill();
   if (progress > 0) {
     const fillGrad = ctx.createLinearGradient(barX, 0, barX + barWidth * progress, 0);
@@ -83,11 +81,11 @@ async function generateLevelCard({ user, xp, level, rank }) {
     ctx.shadowBlur = 0;
   }
 
-  // Stats
+  // Stats (Using totalXp passed down from your DB entry)
   const statsY = 175, statSpacing = contentWidth / 3;
   drawStat(ctx, contentX, statsY, 'RANK', `#${rank}`, COLORS.accentLight);
   drawStat(ctx, contentX + statSpacing, statsY, 'LEVEL', String(level), COLORS.accentLight);
-  drawStat(ctx, contentX + statSpacing * 2, statsY, 'TOTAL XP', formatNumber(xp), COLORS.accentLight);
+  drawStat(ctx, contentX + statSpacing * 2, statsY, 'TOTAL XP', formatNumber(totalXp), COLORS.accentLight);
 
   // Milestone badges
   const milestones = [5, 10, 20, 30, 40, 50];
