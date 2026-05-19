@@ -30,6 +30,7 @@ function totalXpForLevel(level) {
 function xpForNextLevel(level) {
   return totalXpForLevel(level + 1);
 }
+
 async function handleXP(message, client) {
   const key = `${message.author.id}-${message.guild.id}`;
   if (client.xpCooldowns.has(key)) return;
@@ -41,7 +42,7 @@ async function handleXP(message, client) {
 
   await addXP(message.author.id, message.guild.id, XP_PER_MESSAGE);
 
-  // 3. Get the UPDATED data to see the new stats
+  // Get the UPDATED data to see the new stats
   userData = await getUser(message.author.id, message.guild.id);
   const newLevel = calculateLevel(userData.xp);
 
@@ -76,25 +77,21 @@ async function handleLevelUp(message, client, newLevel, totalXp) {
     }
   }
 
-// Replace the old channel lookup with this:
   const levelChannelId = await getConfig(guild.id, 'level_channel');
-  let targetChannel = message.channel; // Default to current channel
+  let targetChannel = message.channel;
 
   if (levelChannelId) {
-    // Clean the ID just in case it has <# > symbols
     const cleanId = levelChannelId.replace(/[<#>]/g, '');
-
-    // Try cache first, then fetch from Discord API
     targetChannel = guild.channels.cache.get(cleanId) ||
         await guild.channels.fetch(cleanId).catch(() => null) ||
         message.channel;
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x7c3aed).setTitle('🎉 Level Up!')
-    .setDescription(`Level UP! ${message.author}, you just ranked up and reached Level ${newLevel}! 🐺`)
-    .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-    .setFooter({ text: `Total XP: ${totalXp.toLocaleString()}` }).setTimestamp();
+      .setColor(0x7c3aed).setTitle('🎉 Level Up!')
+      .setDescription(`Level UP! ${message.author}, you just ranked up and reached Level ${newLevel}! 🐺`)
+      .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+      .setFooter({ text: `Total XP: ${totalXp.toLocaleString()}` }).setTimestamp();
 
   if (LEVEL_ROLES.includes(newLevel)) {
     const roleId = await getConfig(guild.id, `level_role_${newLevel}`);
@@ -140,7 +137,6 @@ async function notifyAchievement(message, client, achievement) {
     embed.addFields({ name: '⭐ XP Reward', value: `+${achievement.reward_xp} XP`, inline: true });
   }
 
-  // --- ROBUST CHANNEL LOOKUP ---
   const levelChannelId = await getConfig(message.guild.id, 'level_channel');
   let ch = message.channel;
 
@@ -150,9 +146,29 @@ async function notifyAchievement(message, client, achievement) {
         await message.guild.channels.fetch(cleanId).catch(() => null) ||
         message.channel;
   }
-  // -----------------------------
 
   if (ch) await ch.send({ content: `🏆 ${message.author}`, embeds: [embed] }).catch(() => {});
 }
 
-module.exports = { handleXP, calculateLevel, xpForNextLevel };
+// 🟩 Helper function for canvas rank cards
+function getRankStats(totalXp) {
+  const level = calculateLevel(totalXp);
+  const currentLevelStartXP = totalXpForLevel(level);
+  const nextLevelStartXP = totalXpForLevel(level + 1);
+
+  return {
+    level: level,
+    xpInCurrentLevel: totalXp - currentLevelStartXP,                 // Progress inside the current level bar
+    xpRequiredForLevelGap: nextLevelStartXP - currentLevelStartXP,   // Total width of the current level bar (120, 180, 240...)
+    totalNextLevelXP: nextLevelStartXP                              // Cumulative XP needed for next level
+  };
+}
+
+// 🟩 Updated exports containing the fixes
+module.exports = {
+  handleXP,
+  calculateLevel,
+  xpForNextLevel,
+  totalXpForLevel,
+  getRankStats
+};
