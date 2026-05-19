@@ -89,7 +89,7 @@ async function handleLevelUp(message, client, newLevel, totalXp) {
 
   const embed = new EmbedBuilder()
       .setColor(0x7c3aed).setTitle('🎉 Level Up!')
-      .setDescription(`Level UP! ${message.author}, you just ranked up and reached Level ${newLevel}! 🐺`)
+      .setDescription(`Awooo! ${message.author} just progressed to **Level ${newLevel}**! ⚡`)
       .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
       .setFooter({ text: `Total XP: ${totalXp.toLocaleString()}` }).setTimestamp();
 

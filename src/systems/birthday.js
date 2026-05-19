@@ -8,7 +8,6 @@ function startBirthdayChecker(client) {
 
   // Also runs once on startup
   checkBirthdays(client);
-  console.log('🎂 Birthday checker started');
 }
 
 async function checkBirthdays(client) {
@@ -23,7 +22,8 @@ async function checkBirthdays(client) {
     const channelId = await getConfig(bday.guild_id, 'birthday_channel');
     if (!channelId) continue;
 
-    const channel = guild.channels.cache.get(channelId);
+    const channel = guild.channels.cache.get(channelId) ||
+        await guild.channels.fetch(channelId).catch(() => null);
     if (!channel) continue;
 
     let member;
@@ -33,15 +33,16 @@ async function checkBirthdays(client) {
       continue;
     }
 
+    // Modern, punchy embed layout
     const embed = new EmbedBuilder()
         .setColor(0xf472b6)
-        .setTitle('🎂 Happy Birthday!')
-        .setDescription(`Attention pack! It's ${member}'s birthday today! Go wish them well! 🥳🎉`)
+        .setTitle(`🎂 Happy Birthday ${member}!`)
+        .setDescription(`Attention pack! Today is ${member}'s birthday! Go drop some Ws in chat! 🥳🎉`)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-        .setFooter({ text: `From everyone in ${guild.name}` })
+        .setFooter({ text: `Leveling up in real life • From ${guild.name}` })
         .setTimestamp();
 
-    // ✅ FIXED: Changed '@everyone' to '${member}' to ping ONLY the birthday person
+    // ✅ Pings the member directly outside the embed so they get notified
     await channel.send({
       content: `🎂 Happy Birthday ${member}!`,
       embeds: [embed]

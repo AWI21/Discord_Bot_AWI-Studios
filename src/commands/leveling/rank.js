@@ -14,11 +14,11 @@ module.exports = {
 
   async execute(message, args, client) {
     const target = message.mentions.users.first() || message.author;
-    const loading = await message.channel.send('🖼️ Generating rank card...');
+    const loading = await message.channel.send('🐺 Sniffing out your stats...');
     const attachment = await _genCard(target, message.guild);
     await loading.delete().catch(() => {});
     if (attachment) await message.reply({ files: [attachment] });
-    else await message.reply(`**${target.username}** — Level info unavailable`);
+    else await message.reply(`*Sniff...* Could not load level data for **${target.username}**`);
   },
 
   async executeSlash(interaction) {
@@ -26,7 +26,7 @@ module.exports = {
     const target = interaction.options.getUser('user') || interaction.user;
     const attachment = await _genCard(target, interaction.guild);
     if (attachment) await interaction.editReply({ files: [attachment] });
-    else await interaction.editReply({ content: `**${target.username}** — Level info unavailable` });
+    else await interaction.editReply({ content: `*Sniff...* Could not load level data for **${target.username}**` });
   },
 };
 
