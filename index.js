@@ -17,4 +17,11 @@ async function init() {
     }
 }
 
+// Add this to the very bottom of your index.js file
+process.on('SIGTERM', () => {
+    console.log('Received SIGTERM. Powering down old instance...');
+    client.destroy();
+    process.exit(0);
+});
+
 init();
