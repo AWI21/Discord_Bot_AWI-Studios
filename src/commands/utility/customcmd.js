@@ -11,8 +11,9 @@ module.exports = {
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
       .addSubcommand(s => s.setName('add').setDescription('Add a custom command')
           .addStringOption(o => o.setName('trigger').setDescription('Trigger word').setRequired(true))
-          .addStringOption(o => o.setName('response').setDescription('Response text').setRequired(true))
-          .addRoleOption(o => o.setName('role').setDescription('Optional: Role required to use this command'))) // Added Role Option
+          // ✨ UI UPGRADE: Documented placeholders directly in the slash command description
+          .addStringOption(o => o.setName('response').setDescription('Response text (Supports {author}, {target}, {user})').setRequired(true))
+          .addRoleOption(o => o.setName('role').setDescription('Optional: Role required to use this command')))
       .addSubcommand(s => s.setName('remove').setDescription('Remove a command')
           .addStringOption(o => o.setName('trigger').setDescription('Trigger to remove').setRequired(true)))
       .addSubcommand(s => s.setName('list').setDescription('List all custom commands')),
@@ -31,7 +32,19 @@ module.exports = {
       // 2. Get response text and strip the role pings so they aren't part of the text
       let response = args.slice(2).join(' ').replace(/<@&\d+>/g, '').trim();
 
-      if (!trigger || !response) return message.reply({ embeds: [errorEmbed(`Usage: \`${prefix}customcmd add <trigger> <response> [@role]\``)] });
+      // ✨ UI UPGRADE: Expanded error layout to serve as an in-game guide
+      if (!trigger || !response) {
+        const guideText = [
+          `⚠️ **Usage:** \`${prefix}customcmd add <trigger> <response> [@role]\``,
+          `\n✨ **Dynamic Placeholders:**`,
+          `• \`{author}\` — Mentions the person running the command.`,
+          `• \`{target}\` — Mentions the tagged user. *(Requires a ping when executed!)*`,
+          `• \`{user}\` — Legacy placeholder (same as {author}).`,
+          `\n*Example: \`${prefix}customcmd add yeet {author} yeeted {target}!\`*`
+        ].join('\n');
+
+        return message.reply({ embeds: [errorEmbed(guideText)] });
+      }
 
       await addCustomCommand(message.guild.id, trigger, response, allowedRoles);
       return message.reply({ embeds: [successEmbed(`Custom command \`${prefix}${trigger}\` created!${allowedRoles.length ? ` (Restricted to ${allowedRoles.length} role(s))` : ''}`)] });
@@ -77,7 +90,6 @@ module.exports = {
 
 async function buildListEmbed(guild, prefix) {
   const cmds = await getAllCustomCommands(guild.id);
-  // Optional: show a lock emoji if the command has role restrictions
   return new EmbedBuilder().setColor(0x7c3aed).setTitle(`🔧 Custom Commands (${cmds.length})`)
       .setDescription(cmds.length ? cmds.map(c => `\`${prefix}${c.trigger}\` ${c.allowed_roles ? '🔒' : ''} → ${c.response.substring(0, 50)}...`).join('\n') : 'No custom commands yet.');
 }
