@@ -61,12 +61,30 @@ module.exports = {
       return;
     }
 
-    // Custom commands logic...
+    // 🔥 UPGRADED: Custom commands dynamic placeholders logic
     const custom = await getCustomCommand(message.guild.id, commandName);
     if (custom) {
-      // (Your existing custom command logic)
-      const response = custom.response.replace('{user}', `<@${message.author.id}>`);
-      await message.channel.send(response);
+      const savedResponse = custom.response;
+
+      // 1. Grab the first mentioned user in the command execution string
+      const target = message.mentions.users.first();
+
+      // 2. Safety Check: If the command requires a target, but no one was tagged
+      if (savedResponse.includes('{target}') && !target) {
+        return message.reply({
+          content: `⚠️ This command requires you to tag a user! Example: \`!${commandName} @user\``,
+          allowedMentions: { repliedUser: false }
+        }).catch(() => {});
+      }
+
+      // 3. Replace all instances of your variables globally
+      const finalResponse = savedResponse
+          .replace(/{author}/g, message.author.toString())
+          .replace(/{user}/g, message.author.toString()) // Backward compatibility for old cmds
+          .replace(/{target}/g, target ? target.toString() : '');
+
+      // 4. Fire it off to the channel
+      await message.channel.send(finalResponse).catch(() => {});
     }
   }
 };
