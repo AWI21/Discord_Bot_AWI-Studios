@@ -61,15 +61,48 @@ module.exports = {
       return;
     }
 
-    // 🔥 UPGRADED: Custom commands dynamic placeholders logic
+    // 🔥 UPGRADED: Custom commands execution with Role Whitelisting
     const custom = await getCustomCommand(message.guild.id, commandName);
     if (custom) {
+
+      // 1. Check for role restrictions saved in the database
+      if (custom.allowed_roles) {
+        let allowedRoles = [];
+
+        // Safely parse role data whether it's stored as a JSON array, object, or raw string
+        if (Array.isArray(custom.allowed_roles)) {
+          allowedRoles = custom.allowed_roles;
+        } else if (typeof custom.allowed_roles === 'string') {
+          try {
+            allowedRoles = JSON.parse(custom.allowed_roles);
+          } catch {
+            allowedRoles = custom.allowed_roles.split(',').map(id => id.trim());
+          }
+        }
+
+        // If roles are assigned to the command, validate the user running it
+        if (allowedRoles.length > 0) {
+          const hasRole = message.member.roles.cache.some(role => allowedRoles.includes(role.id));
+          const isAdmin = message.member.permissions.has(8n); // Bypass lock if Administrator
+
+          if (!hasRole && !isAdmin) {
+            const noPermMsg = await message.reply({
+              content: '❌ You do not have the required role to use this custom command.',
+              allowedMentions: { repliedUser: false }
+            });
+            // Deletes both messages after 5 seconds to keep the server channels clean
+            setTimeout(() => { message.delete().catch(() => {}); noPermMsg.delete().catch(() => {}); }, 5000);
+            return;
+          }
+        }
+      }
+
       const savedResponse = custom.response;
 
-      // 1. Grab the first mentioned user in the command execution string
+      // 2. Grab the first mentioned user in the command execution string
       const target = message.mentions.users.first();
 
-      // 2. Safety Check: If the command requires a target, but no one was tagged
+      // 3. Safety Check: If the command requires a target, but no one was tagged
       if (savedResponse.includes('{target}') && !target) {
         return message.reply({
           content: `⚠️ This command requires you to tag a user! Example: \`!${commandName} @user\``,
@@ -77,13 +110,13 @@ module.exports = {
         }).catch(() => {});
       }
 
-      // 3. Replace all instances of your variables globally
+      // 4. Replace all instances of your variables globally
       const finalResponse = savedResponse
           .replace(/{author}/g, message.author.toString())
           .replace(/{user}/g, message.author.toString()) // Backward compatibility for old cmds
           .replace(/{target}/g, target ? target.toString() : '');
 
-      // 4. Fire it off to the channel
+      // 5. Fire it off to the channel
       await message.channel.send(finalResponse).catch(() => {});
     }
   }
