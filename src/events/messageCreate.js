@@ -61,36 +61,47 @@ module.exports = {
       return;
     }
 
-    // 🔥 UPGRADED: Custom commands execution with Role Whitelisting
+    // 🔥 UPGRADED & BULLETPROOF: Custom commands execution with Type-Safe Role Whitelisting
     const custom = await getCustomCommand(message.guild.id, commandName);
     if (custom) {
 
       // 1. Check for role restrictions saved in the database
-      if (custom.allowed_roles) {
+      if (custom.allowed_roles !== undefined && custom.allowed_roles !== null && custom.allowed_roles !== '') {
         let allowedRoles = [];
 
-        // Safely parse role data whether it's stored as a JSON array, object, or raw string
+        // Type-Safe Normalization Engine: Flattens any incoming DB type into standard string elements
         if (Array.isArray(custom.allowed_roles)) {
-          allowedRoles = custom.allowed_roles;
+          allowedRoles = custom.allowed_roles.map(id => String(id).trim());
         } else if (typeof custom.allowed_roles === 'string') {
           try {
-            allowedRoles = JSON.parse(custom.allowed_roles);
+            const parsed = JSON.parse(custom.allowed_roles);
+            if (Array.isArray(parsed)) {
+              allowedRoles = parsed.map(id => String(id).trim());
+            } else {
+              allowedRoles = [String(parsed).trim()];
+            }
           } catch {
             allowedRoles = custom.allowed_roles.split(',').map(id => id.trim());
           }
+        } else {
+          // Catches raw Numbers or BigInt formats cleanly
+          allowedRoles = [String(custom.allowed_roles).trim()];
         }
 
-        // If roles are assigned to the command, validate the user running it
+        // Clean up any stray empty entries
+        allowedRoles = allowedRoles.filter(id => id.length > 0);
+
+        // If validation strings exist, crosscheck them against user roles
         if (allowedRoles.length > 0) {
-          const hasRole = message.member.roles.cache.some(role => allowedRoles.includes(role.id));
-          const isAdmin = message.member.permissions.has(8n); // Bypass lock if Administrator
+          const hasRole = message.member.roles.cache.some(role => allowedRoles.includes(String(role.id)));
+          const isAdmin = message.member.permissions.has(8n); // Bypass lock if Server Administrator
 
           if (!hasRole && !isAdmin) {
             const noPermMsg = await message.reply({
               content: '❌ You do not have the required role to use this custom command.',
               allowedMentions: { repliedUser: false }
             });
-            // Deletes both messages after 5 seconds to keep the server channels clean
+            // Automatically clears messages after 5 seconds to reduce clutter
             setTimeout(() => { message.delete().catch(() => {}); noPermMsg.delete().catch(() => {}); }, 5000);
             return;
           }
