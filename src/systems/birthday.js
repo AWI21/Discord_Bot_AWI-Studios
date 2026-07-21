@@ -33,11 +33,11 @@ async function checkBirthdays(client) {
       continue;
     }
 
-    // Modern, punchy embed layout
+// src/systems/birthday.js
     const embed = new EmbedBuilder()
         .setColor(0xf472b6)
-        .setTitle(`🎂 Happy Birthday ${user.displayName}!`)
-        .setDescription(`Attention pack! Today is ${member}'s birthday! Go drop some Ws in chat! 🥳🎉`)
+        .setTitle(`🎂 Happy Birthday ${member.displayName}!`) // Fixed: user.displayName -> member.displayName
+        .setDescription(`It's ${member}'s birthday today! Wish them well! 🥳🎉`)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
         .setFooter({ text: `Leveling up in real life • From ${guild.name}` })
         .setTimestamp();
