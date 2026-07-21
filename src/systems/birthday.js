@@ -36,7 +36,7 @@ async function checkBirthdays(client) {
     // Modern, punchy embed layout
     const embed = new EmbedBuilder()
         .setColor(0xf472b6)
-        .setTitle(`🎂 Happy Birthday ${member}!`)
+        .setTitle(`🎂 Happy Birthday ${user.displayName}!`)
         .setDescription(`Attention pack! Today is ${member}'s birthday! Go drop some Ws in chat! 🥳🎉`)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
         .setFooter({ text: `Leveling up in real life • From ${guild.name}` })
