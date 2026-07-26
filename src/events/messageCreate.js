@@ -41,7 +41,7 @@ module.exports = {
         if (!isMod) return message.reply({ content: '❌ You need the **Moderator** role to use this command.', allowedMentions: { repliedUser: false } });
       }
 
-      // ... (Cooldown logic stays the same) ...
+      // ... Cooldown logic ...
       if (!client.cooldowns.has(commandName)) client.cooldowns.set(commandName, new Map());
       const timestamps = client.cooldowns.get(commandName);
       const cooldown = (command.cooldown || 3) * 1000;
@@ -61,74 +61,136 @@ module.exports = {
       return;
     }
 
-    // 🔥 UPGRADED & BULLETPROOF: Custom commands execution with Type-Safe Role Whitelisting
+    // 🔥 ADVANCED CUSTOM COMMAND ENGINE (v3.2.7)
     const custom = await getCustomCommand(message.guild.id, commandName);
     if (custom) {
 
-      // 1. Check for role restrictions saved in the database
+      // 1. Check for role restrictions saved in the database (Type-Safe Normalization)
       if (custom.allowed_roles !== undefined && custom.allowed_roles !== null && custom.allowed_roles !== '') {
         let allowedRoles = [];
 
-        // Type-Safe Normalization Engine: Flattens any incoming DB type into standard string elements
         if (Array.isArray(custom.allowed_roles)) {
           allowedRoles = custom.allowed_roles.map(id => String(id).trim());
         } else if (typeof custom.allowed_roles === 'string') {
           try {
             const parsed = JSON.parse(custom.allowed_roles);
-            if (Array.isArray(parsed)) {
-              allowedRoles = parsed.map(id => String(id).trim());
-            } else {
-              allowedRoles = [String(parsed).trim()];
-            }
+            allowedRoles = Array.isArray(parsed) ? parsed.map(id => String(id).trim()) : [String(parsed).trim()];
           } catch {
             allowedRoles = custom.allowed_roles.split(',').map(id => id.trim());
           }
         } else {
-          // Catches raw Numbers or BigInt formats cleanly
           allowedRoles = [String(custom.allowed_roles).trim()];
         }
 
-        // Clean up any stray empty entries
         allowedRoles = allowedRoles.filter(id => id.length > 0);
 
-        // If validation strings exist, crosscheck them against user roles
         if (allowedRoles.length > 0) {
           const hasRole = message.member.roles.cache.some(role => allowedRoles.includes(String(role.id)));
-          const isAdmin = message.member.permissions.has(8n); // Bypass lock if Server Administrator
+          const isAdmin = message.member.permissions.has(8n);
 
           if (!hasRole && !isAdmin) {
             const noPermMsg = await message.reply({
               content: '❌ You do not have the required role to use this custom command.',
               allowedMentions: { repliedUser: false }
             });
-            // Automatically clears messages after 5 seconds to reduce clutter
             setTimeout(() => { message.delete().catch(() => {}); noPermMsg.delete().catch(() => {}); }, 5000);
             return;
           }
         }
       }
 
-      const savedResponse = custom.response;
+      let savedResponse = custom.response;
 
-      // 2. Grab the first mentioned user in the command execution string
+      // 2. Target Check: Require user mention if {target} is referenced
       const target = message.mentions.users.first();
-
-      // 3. Safety Check: If the command requires a target, but no one was tagged
       if (savedResponse.includes('{target}') && !target) {
         return message.reply({
-          content: `⚠️ This command requires you to tag a user! Example: \`!${commandName} @user\``,
+          content: `⚠️ This command requires you to tag a user! Example: \`${prefix}${commandName} @user\``,
           allowedMentions: { repliedUser: false }
         }).catch(() => {});
       }
 
-      // 4. Replace all instances of your variables globally
-      const finalResponse = savedResponse
+      // 3. Multi-Response & Weighted Probability Engine ([X%] option1 | [Y%] option2)
+      let chosenResponse = savedResponse;
+      if (savedResponse.includes('|')) {
+        const rawOptions = savedResponse.split('|').map(opt => opt.trim()).filter(Boolean);
+
+        const parsedOptions = rawOptions.map(opt => {
+          const match = opt.match(/^\[(\d+)%?\]\s*(.*)$/);
+          if (match) {
+            return { weight: parseInt(match[1], 10), text: match[2] };
+          }
+          return { weight: null, text: opt };
+        });
+
+        const hasWeights = parsedOptions.some(o => o.weight !== null);
+
+        if (hasWeights) {
+          let totalWeight = 0;
+          const normalizedOptions = parsedOptions.map(o => {
+            const w = o.weight !== null ? o.weight : 10;
+            totalWeight += w;
+            return { weight: w, text: o.text };
+          });
+
+          let randomRoll = Math.random() * totalWeight;
+          for (const option of normalizedOptions) {
+            if (randomRoll < option.weight) {
+              chosenResponse = option.text;
+              break;
+            }
+            randomRoll -= option.weight;
+          }
+        } else {
+          chosenResponse = parsedOptions[Math.floor(Math.random() * parsedOptions.length)].text;
+        }
+      }
+
+      // 4. RNG Generator ({random:min-max})
+      chosenResponse = chosenResponse.replace(/{random:(\d+)-(\d+)}/g, (match, min, max) => {
+        const low = parseInt(min, 10);
+        const high = parseInt(max, 10);
+        return Math.floor(Math.random() * (high - low + 1)) + low;
+      });
+
+      // 5. Placeholders Replacement ({author}, {user}, {target})
+      let finalResponse = chosenResponse
           .replace(/{author}/g, message.author.toString())
-          .replace(/{user}/g, message.author.toString()) // Backward compatibility for old cmds
+          .replace(/{user}/g, message.author.toString())
           .replace(/{target}/g, target ? target.toString() : '');
 
-      // 5. Fire it off to the channel
-      await message.channel.send(finalResponse).catch(() => {});
+      // 6. Action Tag Extractor ({ping:everyone}, {ping:here}, {react:emoji1,emoji2})
+      const allowedMentions = { parse: ['users', 'roles'] };
+
+      if (finalResponse.includes('{ping:everyone}')) {
+        finalResponse = finalResponse.replace(/{ping:everyone}/g, '@everyone');
+        allowedMentions.parse.push('everyone');
+      }
+
+      if (finalResponse.includes('{ping:here}')) {
+        finalResponse = finalResponse.replace(/{ping:here}/g, '@here');
+        allowedMentions.parse.push('everyone');
+      }
+
+      let reactionsToAdd = [];
+      finalResponse = finalResponse.replace(/{react:(.*?)}/g, (match, emojis) => {
+        reactionsToAdd = emojis.split(',').map(e => e.trim()).filter(Boolean);
+        return '';
+      });
+
+      // 7. Dispatch Response & Actions
+      if (finalResponse.trim().length > 0) {
+        const sentMsg = await message.channel.send({
+          content: finalResponse,
+          allowedMentions: allowedMentions
+        }).catch(() => {});
+
+        if (sentMsg && reactionsToAdd.length > 0) {
+          for (const emoji of reactionsToAdd) {
+            await sentMsg.react(emoji).catch(() => {});
+          }
+        }
+      }
     }
   }
 };
