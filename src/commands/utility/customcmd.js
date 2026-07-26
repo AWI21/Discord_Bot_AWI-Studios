@@ -5,14 +5,15 @@ const { successEmbed, errorEmbed, requirePerms } = require('../../utils/helpers'
 module.exports = {
   name: 'customcmd',
   aliases: ['cc', 'addcmd'],
+
   // ── Slash Command Builder ──────────────────────────────────────────────────
   slashData: new SlashCommandBuilder()
       .setName('customcmd').setDescription('Manage custom commands')
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
       .addSubcommand(s => s.setName('add').setDescription('Add a custom command')
           .addStringOption(o => o.setName('trigger').setDescription('Trigger word').setRequired(true))
-          // ✨ UI UPGRADE: Documented placeholders directly in the slash command description
-          .addStringOption(o => o.setName('response').setDescription('Response text (Supports {author}, {target}, {user})').setRequired(true))
+          // ✨ UI UPGRADE: Documented new features directly in slash options
+          .addStringOption(o => o.setName('response').setDescription('Response ({author}, {target}, {random:1-100}, opt1|opt2)').setRequired(true))
           .addRoleOption(o => o.setName('role').setDescription('Optional: Role required to use this command')))
       .addSubcommand(s => s.setName('remove').setDescription('Remove a command')
           .addStringOption(o => o.setName('trigger').setDescription('Trigger to remove').setRequired(true)))
@@ -29,10 +30,10 @@ module.exports = {
       // 1. Capture roles from mentions
       const allowedRoles = message.mentions.roles.map(r => r.id);
 
-      // 2. Get response text and strip the role pings so they aren't part of the text
+      // 2. Get response text and strip role pings so they aren't part of text
       let response = args.slice(2).join(' ').replace(/<@&\d+>/g, '').trim();
 
-      // ✨ UI UPGRADE: Expanded error layout to serve as an in-game guide
+      // ✨ UI UPGRADE: Fully expanded documentation embed guide
       if (!trigger || !response) {
         const guideText = [
           `⚠️ **Usage:** \`${prefix}customcmd add <trigger> <response> [@role]\``,
@@ -40,7 +41,13 @@ module.exports = {
           `• \`{author}\` — Mentions the person running the command.`,
           `• \`{target}\` — Mentions the tagged user. *(Requires a ping when executed!)*`,
           `• \`{user}\` — Legacy placeholder (same as {author}).`,
-          `\n*Example: \`${prefix}customcmd add yeet {author} yeeted {target}!\`*`
+          `• \`{random:min-max}\` — Rolls a random number *(e.g. \`{random:1-100}\`)*.`,
+          `\n🔥 **Advanced Features & Tags:**`,
+          `• \`opt1 | opt2\` — Randomly selects one response.`,
+          `• \`[X%] response\` — Sets percentage odds *(e.g. \`[10%] Win | [90%] Loss\`)*.`,
+          `• \`{ping:everyone}\` / \`{ping:here}\` — Safely pings @everyone or @here.`,
+          `• \`{react:👍,👎}\` — Auto-adds emoji reactions to the bot message.`,
+          `\n*Example: \`${prefix}customcmd add gamble [99%] 🎲 {author} lost! | [1%] 🎰 JACKPOT! {ping:everyone}\`*`
         ].join('\n');
 
         return message.reply({ embeds: [errorEmbed(guideText)] });
