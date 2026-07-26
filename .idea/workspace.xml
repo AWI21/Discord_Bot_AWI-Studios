@@ -8,7 +8,9 @@
       <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/systems/birthday.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/birthday.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/customcmd.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/customcmd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/database/db.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/database/db.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/events/messageCreate.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/events/messageCreate.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -88,7 +90,9 @@
       <workItem from="1780593086323" duration="795000" />
       <workItem from="1780825058517" duration="1000" />
       <workItem from="1780825103225" duration="354000" />
-      <workItem from="1784630208035" duration="143000" />
+      <workItem from="1784630208035" duration="209000" />
+      <workItem from="1784630525212" duration="176000" />
+      <workItem from="1785093621608" duration="2317000" />
     </task>
     <task id="LOCAL-00001" summary="workspace.xml and ready.js changes">
       <option name="closed" value="true" />

@@ -7,12 +7,9 @@ module.exports = {
   async execute(message, client) {
     if (message.author.bot || !message.guild) return;
 
-    // ⚡ OPTIMIZATION: Do NOT 'await' these.
-    // Let them run in the background while we check for the command.
     handleAutomod(message, client).catch(err => console.error("Automod Error:", err));
     handleXP(message, client).catch(err => console.error("XP Error:", err));
 
-    // ⚡ OPTIMIZATION: Check prefix (Ideally this would be cached, but let's start here)
     const prefix = await getConfig(message.guild.id, 'prefix') || process.env.DEFAULT_PREFIX || '!';
     if (!message.content.startsWith(prefix)) return;
 
@@ -21,7 +18,6 @@ module.exports = {
     const command = client.commands.get(commandName);
 
     if (command) {
-      // ⚡ OPTIMIZATION: Run these checks in parallel (Promise.all)
       const [allowedChannels, modRoleId] = await Promise.all([
         getCommandChannels(message.guild.id),
         getConfig(message.guild.id, 'mod_role')
@@ -41,13 +37,12 @@ module.exports = {
         if (!isMod) return message.reply({ content: '❌ You need the **Moderator** role to use this command.', allowedMentions: { repliedUser: false } });
       }
 
-      // ... Cooldown logic ...
       if (!client.cooldowns.has(commandName)) client.cooldowns.set(commandName, new Map());
       const timestamps = client.cooldowns.get(commandName);
       const cooldown = (command.cooldown || 3) * 1000;
       if (timestamps.has(message.author.id)) {
         const expiry = timestamps.get(message.author.id) + cooldown;
-        if (Date.now() < expiry) return; // Silent return for speed
+        if (Date.now() < expiry) return;
       }
       timestamps.set(message.author.id, Date.now());
       setTimeout(() => timestamps.delete(message.author.id), cooldown);
@@ -61,11 +56,34 @@ module.exports = {
       return;
     }
 
-    // 🔥 ADVANCED CUSTOM COMMAND ENGINE (v3.2.7)
+    // 🔥 ADVANCED CUSTOM COMMAND ENGINE
     const custom = await getCustomCommand(message.guild.id, commandName);
     if (custom) {
 
-      // 1. Check for role restrictions saved in the database (Type-Safe Normalization)
+      // 0. Custom Command Cooldown Check
+      if (custom.cooldown && custom.cooldown > 0) {
+        if (!client.customCmdCooldowns) client.customCmdCooldowns = new Map();
+
+        const cooldownKey = `${message.guild.id}-${message.author.id}-${commandName}`;
+        const now = Date.now();
+        const cooldownEnd = client.customCmdCooldowns.get(cooldownKey) || 0;
+
+        if (now < cooldownEnd) {
+          const timeLeft = Math.ceil((cooldownEnd - now) / 1000);
+          const msg = await message.reply({
+            content: `⏳ Take a breath! You can use \`${prefix}${commandName}\` again in **${timeLeft}s**.`,
+            allowedMentions: { repliedUser: false }
+          });
+          // Auto-delete the warning after 5 seconds to prevent chat spam
+          setTimeout(() => { message.delete().catch(() => {}); msg.delete().catch(() => {}); }, 5000);
+          return;
+        }
+
+        // Set new cooldown expiration
+        client.customCmdCooldowns.set(cooldownKey, now + (custom.cooldown * 1000));
+      }
+
+      // 1. Check for role restrictions
       if (custom.allowed_roles !== undefined && custom.allowed_roles !== null && custom.allowed_roles !== '') {
         let allowedRoles = [];
 
@@ -101,7 +119,7 @@ module.exports = {
 
       let savedResponse = custom.response;
 
-      // 2. Target Check: Require user mention if {target} is referenced
+      // 2. Target Check
       const target = message.mentions.users.first();
       if (savedResponse.includes('{target}') && !target) {
         return message.reply({
@@ -110,7 +128,7 @@ module.exports = {
         }).catch(() => {});
       }
 
-      // 3. Multi-Response & Weighted Probability Engine ([X%] option1 | [Y%] option2)
+      // 3. Multi-Response & Weighted Probability Engine
       let chosenResponse = savedResponse;
       if (savedResponse.includes('|')) {
         const rawOptions = savedResponse.split('|').map(opt => opt.trim()).filter(Boolean);
@@ -146,20 +164,20 @@ module.exports = {
         }
       }
 
-      // 4. RNG Generator ({random:min-max})
+      // 4. RNG Generator
       chosenResponse = chosenResponse.replace(/{random:(\d+)-(\d+)}/g, (match, min, max) => {
         const low = parseInt(min, 10);
         const high = parseInt(max, 10);
         return Math.floor(Math.random() * (high - low + 1)) + low;
       });
 
-      // 5. Placeholders Replacement ({author}, {user}, {target})
+      // 5. Placeholders Replacement
       let finalResponse = chosenResponse
           .replace(/{author}/g, message.author.toString())
           .replace(/{user}/g, message.author.toString())
           .replace(/{target}/g, target ? target.toString() : '');
 
-      // 6. Action Tag Extractor ({ping:everyone}, {ping:here}, {react:emoji1,emoji2})
+      // 6. Action Tag Extractor
       const allowedMentions = { parse: ['users', 'roles'] };
 
       if (finalResponse.includes('{ping:everyone}')) {

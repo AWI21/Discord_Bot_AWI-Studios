@@ -2,6 +2,18 @@ const { EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, MessageFlags } =
 const { addCustomCommand, removeCustomCommand, getAllCustomCommands } = require('../../database/db');
 const { successEmbed, errorEmbed, requirePerms } = require('../../utils/helpers');
 
+// Helper to parse duration strings like "30s", "2m", "1h" or raw numbers into seconds
+function parseCooldown(str) {
+  if (!str) return 0;
+  const match = str.match(/^(\d+)([smh])?$/i);
+  if (!match) return 0;
+  const val = parseInt(match[1], 10);
+  const unit = (match[2] || 's').toLowerCase();
+  if (unit === 'm') return val * 60;
+  if (unit === 'h') return val * 3600;
+  return val;
+}
+
 module.exports = {
   name: 'customcmd',
   aliases: ['cc', 'addcmd'],
@@ -12,8 +24,8 @@ module.exports = {
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
       .addSubcommand(s => s.setName('add').setDescription('Add a custom command')
           .addStringOption(o => o.setName('trigger').setDescription('Trigger word').setRequired(true))
-          // ✨ UI UPGRADE: Documented new features directly in slash options
           .addStringOption(o => o.setName('response').setDescription('Response ({author}, {target}, {random:1-100}, opt1|opt2)').setRequired(true))
+          .addIntegerOption(o => o.setName('cooldown').setDescription('Cooldown in seconds (e.g. 30)').setRequired(false))
           .addRoleOption(o => o.setName('role').setDescription('Optional: Role required to use this command')))
       .addSubcommand(s => s.setName('remove').setDescription('Remove a command')
           .addStringOption(o => o.setName('trigger').setDescription('Trigger to remove').setRequired(true)))
@@ -26,35 +38,42 @@ module.exports = {
 
     if (sub === 'add') {
       const trigger = args[1];
+      let cooldown = 0;
+      let responseStartIndex = 2;
 
-      // 1. Capture roles from mentions
+      // Check if argument 2 is a time duration (e.g., 30s, 1m, 10)
+      if (args[2] && /^(\d+)([smh])?$/i.test(args[2])) {
+        cooldown = parseCooldown(args[2]);
+        responseStartIndex = 3;
+      }
+
+      // Capture roles from mentions
       const allowedRoles = message.mentions.roles.map(r => r.id);
 
-      // 2. Get response text and strip role pings so they aren't part of text
-      let response = args.slice(2).join(' ').replace(/<@&\d+>/g, '').trim();
+      // Get response text and strip role pings so they aren't part of text
+      let response = args.slice(responseStartIndex).join(' ').replace(/<@&\d+>/g, '').trim();
 
-      // ✨ UI UPGRADE: Fully expanded documentation embed guide
       if (!trigger || !response) {
         const guideText = [
-          `⚠️ **Usage:** \`${prefix}customcmd add <trigger> <response> [@role]\``,
+          `⚠️ **Usage:** \`${prefix}customcmd add <trigger> [cooldown] <response> [@role]\``,
+          `\n⏱️ **Cooldown Examples:** \`10s\` (10 sec), \`1m\` (1 min), \`5m\` (5 min)`,
           `\n✨ **Dynamic Placeholders:**`,
           `• \`{author}\` — Mentions the person running the command.`,
           `• \`{target}\` — Mentions the tagged user. *(Requires a ping when executed!)*`,
-          `• \`{user}\` — Legacy placeholder (same as {author}).`,
           `• \`{random:min-max}\` — Rolls a random number *(e.g. \`{random:1-100}\`)*.`,
           `\n🔥 **Advanced Features & Tags:**`,
           `• \`opt1 | opt2\` — Randomly selects one response.`,
           `• \`[X%] response\` — Sets percentage odds *(e.g. \`[10%] Win | [90%] Loss\`)*.`,
           `• \`{ping:everyone}\` / \`{ping:here}\` — Safely pings @everyone or @here.`,
           `• \`{react:👍,👎}\` — Auto-adds emoji reactions to the bot message.`,
-          `\n*Example: \`${prefix}customcmd add gamble [99%] 🎲 {author} lost! | [1%] 🎰 JACKPOT! {ping:everyone}\`*`
+          `\n*Example: \`${prefix}customcmd add spark 30s [99%] 💨 {author} failed! | [1%] 🎰 {ping:everyone}\`*`
         ].join('\n');
 
         return message.reply({ embeds: [errorEmbed(guideText)] });
       }
 
-      await addCustomCommand(message.guild.id, trigger, response, allowedRoles);
-      return message.reply({ embeds: [successEmbed(`Custom command \`${prefix}${trigger}\` created!${allowedRoles.length ? ` (Restricted to ${allowedRoles.length} role(s))` : ''}`)] });
+      await addCustomCommand(message.guild.id, trigger, response, allowedRoles, cooldown);
+      return message.reply({ embeds: [successEmbed(`Custom command \`${prefix}${trigger}\` created!${cooldown ? ` ⏱️ **${cooldown}s** cooldown.` : ''}${allowedRoles.length ? ` (Restricted to roles)` : ''}`)] });
     }
 
     if (sub === 'remove' || sub === 'delete') {
@@ -76,12 +95,13 @@ module.exports = {
     if (sub === 'add') {
       const trigger = interaction.options.getString('trigger');
       const response = interaction.options.getString('response');
+      const cooldown = interaction.options.getInteger('cooldown') || 0;
       const role = interaction.options.getRole('role');
 
       const roles = role ? [role.id] : [];
 
-      await addCustomCommand(interaction.guild.id, trigger, response, roles);
-      return interaction.editReply({ embeds: [successEmbed(`Custom command \`!${trigger}\` created!${role ? ` (Role: ${role.name})` : ''}`)] });
+      await addCustomCommand(interaction.guild.id, trigger, response, roles, cooldown);
+      return interaction.editReply({ embeds: [successEmbed(`Custom command \`!${trigger}\` created!${cooldown ? ` ⏱️ **${cooldown}s** cooldown.` : ''}${role ? ` (Role: ${role.name})` : ''}`)] });
     }
 
     if (sub === 'remove') {
@@ -98,5 +118,5 @@ module.exports = {
 async function buildListEmbed(guild, prefix) {
   const cmds = await getAllCustomCommands(guild.id);
   return new EmbedBuilder().setColor(0x7c3aed).setTitle(`🔧 Custom Commands (${cmds.length})`)
-      .setDescription(cmds.length ? cmds.map(c => `\`${prefix}${c.trigger}\` ${c.allowed_roles ? '🔒' : ''} → ${c.response.substring(0, 50)}...`).join('\n') : 'No custom commands yet.');
+      .setDescription(cmds.length ? cmds.map(c => `\`${prefix}${c.trigger}\` ${c.cooldown ? `⏱️${c.cooldown}s ` : ''}${c.allowed_roles ? '🔒' : ''} → ${c.response.substring(0, 45)}...`).join('\n') : 'No custom commands yet.');
 }

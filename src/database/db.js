@@ -24,8 +24,8 @@ async function initDatabase() {
     `CREATE TABLE IF NOT EXISTS vouch_log (id INTEGER PRIMARY KEY AUTOINCREMENT, target_id TEXT, guild_id TEXT, points INTEGER, given_by TEXT, timestamp INTEGER)`,
     `CREATE TABLE IF NOT EXISTS achievements (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, name TEXT, description TEXT, requirement_type TEXT, requirement_value INTEGER, reward_role_id TEXT, reward_xp INTEGER DEFAULT 0)`,
     `CREATE TABLE IF NOT EXISTS user_achievements (user_id TEXT, guild_id TEXT, achievement_id INTEGER, earned_at INTEGER, PRIMARY KEY (user_id, guild_id, achievement_id))`,
-    // UPDATED: Added allowed_roles column here
-    `CREATE TABLE IF NOT EXISTS custom_commands (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, trigger TEXT, response TEXT, allowed_roles TEXT, UNIQUE(guild_id, trigger))`,
+    // UPDATED: Added allowed_roles and cooldown columns
+    `CREATE TABLE IF NOT EXISTS custom_commands (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT, trigger TEXT, response TEXT, allowed_roles TEXT, cooldown INTEGER DEFAULT 0, UNIQUE(guild_id, trigger))`,
     `CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT UNIQUE, guild_id TEXT, user_id TEXT, status TEXT DEFAULT 'open', created_at INTEGER)`,
     `CREATE TABLE IF NOT EXISTS notification_cache (id TEXT, platform TEXT, guild_id TEXT, posted_at INTEGER, PRIMARY KEY (id, platform, guild_id))`,
     `CREATE TABLE IF NOT EXISTS auto_roles (guild_id TEXT, role_id TEXT, PRIMARY KEY (guild_id, role_id))`,
@@ -46,21 +46,15 @@ async function initDatabase() {
     }
   }
 
-  // 🛠️ MIGRATION: This adds the column to your EXISTING database without breaking anything
-  try {
-    await db.execute("ALTER TABLE custom_commands ADD COLUMN allowed_roles TEXT");
-  } catch (err) {
-    // We catch the error because if the column already exists, SQLite will throw an error.
-    // We can safely ignore it.
-  }
+  // 🛠️ MIGRATION: Safe column additions
+  try { await db.execute("ALTER TABLE custom_commands ADD COLUMN allowed_roles TEXT"); } catch (err) {}
+  try { await db.execute("ALTER TABLE custom_commands ADD COLUMN cooldown INTEGER DEFAULT 0"); } catch (err) {}
 
   console.log(chalk.green('✅ Turso database initialized'));
 }
 
 // ── Helper: get first row ────────────────────────────────────────────────────
-function first(result) {
-  return result.rows && result.rows.length > 0 ? result.rows[0] : null;
-}
+function first(result) { return result.rows && result.rows.length > 0 ? result.rows[0] : null; }
 
 // ── Config ───────────────────────────────────────────────────────────────────
 async function getConfig(guildId, key) {
@@ -82,23 +76,11 @@ async function getUser(userId, guildId) {
 async function ensureUser(userId, guildId) {
   await db.execute({ sql: 'INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?, ?)', args: [userId, guildId] });
 }
-// ⚡ OPTIMIZATION: One query instead of two
 async function addXP(userId, guild_id, amount) {
   await db.execute({
-    sql: `INSERT INTO users (user_id, guild_id, xp, messages, level) 
-          VALUES (?, ?, ?, 1, 0) 
-          ON CONFLICT(user_id, guild_id) 
-          DO UPDATE SET xp = xp + ?, messages = messages + 1`,
+    sql: `INSERT INTO users (user_id, guild_id, xp, messages, level) VALUES (?, ?, ?, 1, 0) ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = xp + ?, messages = messages + 1`,
     args: [userId, guild_id, amount, amount]
   });
-  // If you don't NEED the user object back immediately for a level-up message,
-  // don't call getUser() here.
-}
-
-// ── Helper: get first row ────────────────────────────────────────────────────
-// ⚡ OPTIMIZATION: Pre-map rows to be cleaner
-function first(result) {
-  return result.rows && result.rows.length > 0 ? result.rows[0] : null;
 }
 async function setXP(userId, guildId, amount) {
   await ensureUser(userId, guildId);
@@ -121,32 +103,15 @@ async function getUserRank(userId, guildId) {
 }
 
 // ── Warnings ──────────────────────────────────────────────────────────────────
-async function addWarning(userId, guildId, reason, moderatorId) {
-  await db.execute({ sql: 'INSERT INTO warnings (user_id, guild_id, reason, moderator_id, timestamp) VALUES (?, ?, ?, ?, ?)', args: [userId, guildId, reason, moderatorId, Date.now()] });
-}
-async function getWarnings(userId, guildId) {
-  const r = await db.execute({ sql: 'SELECT * FROM warnings WHERE user_id = ? AND guild_id = ? ORDER BY timestamp DESC', args: [userId, guildId] });
-  return r.rows;
-}
-async function clearWarnings(userId, guildId) {
-  await db.execute({ sql: 'DELETE FROM warnings WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
-}
-async function removeWarning(warningId) {
-  await db.execute({ sql: 'DELETE FROM warnings WHERE id = ?', args: [warningId] });
-}
+async function addWarning(userId, guildId, reason, moderatorId) { await db.execute({ sql: 'INSERT INTO warnings (user_id, guild_id, reason, moderator_id, timestamp) VALUES (?, ?, ?, ?, ?)', args: [userId, guildId, reason, moderatorId, Date.now()] }); }
+async function getWarnings(userId, guildId) { const r = await db.execute({ sql: 'SELECT * FROM warnings WHERE user_id = ? AND guild_id = ? ORDER BY timestamp DESC', args: [userId, guildId] }); return r.rows; }
+async function clearWarnings(userId, guildId) { await db.execute({ sql: 'DELETE FROM warnings WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] }); }
+async function removeWarning(warningId) { await db.execute({ sql: 'DELETE FROM warnings WHERE id = ?', args: [warningId] }); }
 
 // ── Birthdays ─────────────────────────────────────────────────────────────────
-async function setBirthday(userId, guildId, month, day) {
-  await db.execute({ sql: 'INSERT OR REPLACE INTO birthdays (user_id, guild_id, month, day) VALUES (?, ?, ?, ?)', args: [userId, guildId, month, day] });
-}
-async function getBirthday(userId, guildId) {
-  const r = await db.execute({ sql: 'SELECT * FROM birthdays WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
-  return first(r);
-}
-async function getTodayBirthdays(month, day) {
-  const r = await db.execute({ sql: 'SELECT * FROM birthdays WHERE month = ? AND day = ?', args: [month, day] });
-  return r.rows;
-}
+async function setBirthday(userId, guildId, month, day) { await db.execute({ sql: 'INSERT OR REPLACE INTO birthdays (user_id, guild_id, month, day) VALUES (?, ?, ?, ?)', args: [userId, guildId, month, day] }); }
+async function getBirthday(userId, guildId) { const r = await db.execute({ sql: 'SELECT * FROM birthdays WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] }); return first(r); }
+async function getTodayBirthdays(month, day) { const r = await db.execute({ sql: 'SELECT * FROM birthdays WHERE month = ? AND day = ?', args: [month, day] }); return r.rows; }
 
 // ── Vouches ───────────────────────────────────────────────────────────────────
 async function addVouch(targetId, guildId, points, giverId) {
@@ -154,55 +119,26 @@ async function addVouch(targetId, guildId, points, giverId) {
   await db.execute({ sql: 'UPDATE vouches SET points = points + ? WHERE user_id = ? AND guild_id = ?', args: [points, targetId, guildId] });
   await db.execute({ sql: 'INSERT INTO vouch_log (target_id, guild_id, points, given_by, timestamp) VALUES (?, ?, ?, ?, ?)', args: [targetId, guildId, points, giverId, Date.now()] });
 }
-async function getVouches(userId, guildId) {
-  const r = await db.execute({ sql: 'SELECT * FROM vouches WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
-  return first(r);
-}
-async function getVouchLeaderboard(guildId, limit = 10) {
-  const r = await db.execute({ sql: 'SELECT * FROM vouches WHERE guild_id = ? ORDER BY points DESC LIMIT ?', args: [guildId, limit] });
-  return r.rows;
-}
+async function getVouches(userId, guildId) { const r = await db.execute({ sql: 'SELECT * FROM vouches WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] }); return first(r); }
+async function getVouchLeaderboard(guildId, limit = 10) { const r = await db.execute({ sql: 'SELECT * FROM vouches WHERE guild_id = ? ORDER BY points DESC LIMIT ?', args: [guildId, limit] }); return r.rows; }
 
 // ── Achievements ──────────────────────────────────────────────────────────────
-async function createAchievement(guildId, name, description, requirementType, requirementValue, rewardRoleId, rewardXp) {
-  await db.execute({ sql: 'INSERT INTO achievements (guild_id, name, description, requirement_type, requirement_value, reward_role_id, reward_xp) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [guildId, name, description, requirementType, requirementValue, rewardRoleId || null, rewardXp || 0] });
-}
-async function deleteAchievement(id, guildId) {
-  await db.execute({ sql: 'DELETE FROM user_achievements WHERE achievement_id = ?', args: [id] });
-  await db.execute({ sql: 'DELETE FROM achievements WHERE id = ? AND guild_id = ?', args: [id, guildId] });
-}
-async function getAchievements(guildId) {
-  const r = await db.execute({ sql: 'SELECT * FROM achievements WHERE guild_id = ?', args: [guildId] });
-  return r.rows;
-}
-async function getUserAchievements(userId, guildId) {
-  const r = await db.execute({ sql: 'SELECT a.*, ua.earned_at FROM achievements a JOIN user_achievements ua ON a.id = ua.achievement_id WHERE ua.user_id = ? AND ua.guild_id = ?', args: [userId, guildId] });
-  return r.rows;
-}
-async function grantAchievement(userId, guildId, achievementId) {
-  try {
-    await db.execute({ sql: 'INSERT OR IGNORE INTO user_achievements (user_id, guild_id, achievement_id, earned_at) VALUES (?, ?, ?, ?)', args: [userId, guildId, achievementId, Date.now()] });
-    return true;
-  } catch { return false; }
-}
-async function hasAchievement(userId, guildId, achievementId) {
-  const r = await db.execute({ sql: 'SELECT 1 FROM user_achievements WHERE user_id = ? AND guild_id = ? AND achievement_id = ?', args: [userId, guildId, achievementId] });
-  return r.rows.length > 0;
-}
-async function revokeUserAchievement(userId, guildId, achievementId) {
-  await db.execute({ sql: 'DELETE FROM user_achievements WHERE user_id = ? AND guild_id = ? AND achievement_id = ?', args: [userId, guildId, achievementId] });
-}
-async function revokeAllUserAchievements(userId, guildId) {
-  await db.execute({ sql: 'DELETE FROM user_achievements WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] });
-}
+async function createAchievement(guildId, name, description, requirementType, requirementValue, rewardRoleId, rewardXp) { await db.execute({ sql: 'INSERT INTO achievements (guild_id, name, description, requirement_type, requirement_value, reward_role_id, reward_xp) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [guildId, name, description, requirementType, requirementValue, rewardRoleId || null, rewardXp || 0] }); }
+async function deleteAchievement(id, guildId) { await db.execute({ sql: 'DELETE FROM user_achievements WHERE achievement_id = ?', args: [id] }); await db.execute({ sql: 'DELETE FROM achievements WHERE id = ? AND guild_id = ?', args: [id, guildId] }); }
+async function getAchievements(guildId) { const r = await db.execute({ sql: 'SELECT * FROM achievements WHERE guild_id = ?', args: [guildId] }); return r.rows; }
+async function getUserAchievements(userId, guildId) { const r = await db.execute({ sql: 'SELECT a.*, ua.earned_at FROM achievements a JOIN user_achievements ua ON a.id = ua.achievement_id WHERE ua.user_id = ? AND ua.guild_id = ?', args: [userId, guildId] }); return r.rows; }
+async function grantAchievement(userId, guildId, achievementId) { try { await db.execute({ sql: 'INSERT OR IGNORE INTO user_achievements (user_id, guild_id, achievement_id, earned_at) VALUES (?, ?, ?, ?)', args: [userId, guildId, achievementId, Date.now()] }); return true; } catch { return false; } }
+async function hasAchievement(userId, guildId, achievementId) { const r = await db.execute({ sql: 'SELECT 1 FROM user_achievements WHERE user_id = ? AND guild_id = ? AND achievement_id = ?', args: [userId, guildId, achievementId] }); return r.rows.length > 0; }
+async function revokeUserAchievement(userId, guildId, achievementId) { await db.execute({ sql: 'DELETE FROM user_achievements WHERE user_id = ? AND guild_id = ? AND achievement_id = ?', args: [userId, guildId, achievementId] }); }
+async function revokeAllUserAchievements(userId, guildId) { await db.execute({ sql: 'DELETE FROM user_achievements WHERE user_id = ? AND guild_id = ?', args: [userId, guildId] }); }
 
 // ── Custom commands ───────────────────────────────────────────────────────────
-// UPDATED: Now takes 'roles' as a 4th argument
-async function addCustomCommand(guildId, trigger, response, roles = []) {
+// UPDATED: Takes 'cooldown' as the 5th argument
+async function addCustomCommand(guildId, trigger, response, roles = [], cooldown = 0) {
   const roleString = roles && roles.length > 0 ? roles.join(',') : null;
   await db.execute({
-    sql: 'INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, allowed_roles) VALUES (?, ?, ?, ?)',
-    args: [guildId, trigger.toLowerCase(), response, roleString]
+    sql: 'INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, allowed_roles, cooldown) VALUES (?, ?, ?, ?, ?)',
+    args: [guildId, trigger.toLowerCase(), response, roleString, cooldown]
   });
 }
 
@@ -221,61 +157,28 @@ async function getAllCustomCommands(guildId) {
 }
 
 // ── Tickets ───────────────────────────────────────────────────────────────────
-async function createTicket(channelId, guildId, userId) {
-  await db.execute({ sql: 'INSERT INTO tickets (channel_id, guild_id, user_id, created_at) VALUES (?, ?, ?, ?)', args: [channelId, guildId, userId, Date.now()] });
-}
-async function getTicket(channelId) {
-  const r = await db.execute({ sql: 'SELECT * FROM tickets WHERE channel_id = ?', args: [channelId] });
-  return first(r);
-}
-async function updateTicketStatus(channelId, status) {
-  await db.execute({ sql: 'UPDATE tickets SET status = ? WHERE channel_id = ?', args: [status, channelId] });
-}
+async function createTicket(channelId, guildId, userId) { await db.execute({ sql: 'INSERT INTO tickets (channel_id, guild_id, user_id, created_at) VALUES (?, ?, ?, ?)', args: [channelId, guildId, userId, Date.now()] }); }
+async function getTicket(channelId) { const r = await db.execute({ sql: 'SELECT * FROM tickets WHERE channel_id = ?', args: [channelId] }); return first(r); }
+async function updateTicketStatus(channelId, status) { await db.execute({ sql: 'UPDATE tickets SET status = ? WHERE channel_id = ?', args: [status, channelId] }); }
 
 // ── Notification cache ────────────────────────────────────────────────────────
-async function hasPosted(id, platform, guildId) {
-  const r = await db.execute({ sql: 'SELECT 1 FROM notification_cache WHERE id = ? AND platform = ? AND guild_id = ?', args: [id, platform, guildId] });
-  return r.rows.length > 0;
-}
-async function markPosted(id, platform, guildId) {
-  await db.execute({ sql: 'INSERT OR IGNORE INTO notification_cache (id, platform, guild_id, posted_at) VALUES (?, ?, ?, ?)', args: [id, platform, guildId, Date.now()] });
-}
+async function hasPosted(id, platform, guildId) { const r = await db.execute({ sql: 'SELECT 1 FROM notification_cache WHERE id = ? AND platform = ? AND guild_id = ?', args: [id, platform, guildId] }); return r.rows.length > 0; }
+async function markPosted(id, platform, guildId) { await db.execute({ sql: 'INSERT OR IGNORE INTO notification_cache (id, platform, guild_id, posted_at) VALUES (?, ?, ?, ?)', args: [id, platform, guildId, Date.now()] }); }
 
 // ── Auto roles ────────────────────────────────────────────────────────────────
-async function addAutoRole(guildId, role_id) {
-  await db.execute({ sql: 'INSERT OR IGNORE INTO auto_roles (guild_id, role_id) VALUES (?, ?)', args: [guildId, role_id] });
-}
-async function removeAutoRole(guildId, role_id) {
-  await db.execute({ sql: 'DELETE FROM auto_roles WHERE guild_id = ? AND role_id = ?', args: [guildId, role_id] });
-}
-async function getAutoRoles(guildId) {
-  const r = await db.execute({ sql: 'SELECT role_id FROM auto_roles WHERE guild_id = ?', args: [guildId] });
-  return r.rows.map(row => row.role_id);
-}
+async function addAutoRole(guildId, role_id) { await db.execute({ sql: 'INSERT OR IGNORE INTO auto_roles (guild_id, role_id) VALUES (?, ?)', args: [guildId, role_id] }); }
+async function removeAutoRole(guildId, role_id) { await db.execute({ sql: 'DELETE FROM auto_roles WHERE guild_id = ? AND role_id = ?', args: [guildId, role_id] }); }
+async function getAutoRoles(guildId) { const r = await db.execute({ sql: 'SELECT role_id FROM auto_roles WHERE guild_id = ?', args: [guildId] }); return r.rows.map(row => row.role_id); }
 
 // ── Automod words ─────────────────────────────────────────────────────────────
-async function addBannedWord(guildId, word) {
-  await db.execute({ sql: 'INSERT OR IGNORE INTO automod_words (guild_id, word) VALUES (?, ?)', args: [guildId, word.toLowerCase()] });
-}
-async function removeBannedWord(guildId, word) {
-  await db.execute({ sql: 'DELETE FROM automod_words WHERE guild_id = ? AND word = ?', args: [guildId, word.toLowerCase()] });
-}
-async function getBannedWords(guildId) {
-  const r = await db.execute({ sql: 'SELECT word FROM automod_words WHERE guild_id = ?', args: [guildId] });
-  return r.rows.map(row => row.word);
-}
+async function addBannedWord(guildId, word) { await db.execute({ sql: 'INSERT OR IGNORE INTO automod_words (guild_id, word) VALUES (?, ?)', args: [guildId, word.toLowerCase()] }); }
+async function removeBannedWord(guildId, word) { await db.execute({ sql: 'DELETE FROM automod_words WHERE guild_id = ? AND word = ?', args: [guildId, word.toLowerCase()] }); }
+async function getBannedWords(guildId) { const r = await db.execute({ sql: 'SELECT word FROM automod_words WHERE guild_id = ?', args: [guildId] }); return r.rows.map(row => row.word); }
 
 // ── Command channels ──────────────────────────────────────────────────────────
-async function addCommandChannel(guildId, channelId) {
-  await db.execute({ sql: 'INSERT OR IGNORE INTO command_channels (guild_id, channel_id) VALUES (?, ?)', args: [guildId, channelId] });
-}
-async function removeCommandChannel(guildId, channelId) {
-  await db.execute({ sql: 'DELETE FROM command_channels WHERE guild_id = ? AND channel_id = ?', args: [guildId, channelId] });
-}
-async function getCommandChannels(guildId) {
-  const r = await db.execute({ sql: 'SELECT channel_id FROM command_channels WHERE guild_id = ?', args: [guildId] });
-  return r.rows.map(row => row.channel_id);
-}
+async function addCommandChannel(guildId, channelId) { await db.execute({ sql: 'INSERT OR IGNORE INTO command_channels (guild_id, channel_id) VALUES (?, ?)', args: [guildId, channelId] }); }
+async function removeCommandChannel(guildId, channelId) { await db.execute({ sql: 'DELETE FROM command_channels WHERE guild_id = ? AND channel_id = ?', args: [guildId, channelId] }); }
+async function getCommandChannels(guildId) { const r = await db.execute({ sql: 'SELECT channel_id FROM command_channels WHERE guild_id = ?', args: [guildId] }); return r.rows.map(row => row.channel_id); }
 
 module.exports = {
   initDatabase,
