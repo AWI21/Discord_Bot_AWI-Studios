@@ -6,11 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="9b3fc239-6a9e-49d3-b820-4d05bb0705d7" name="Changes" comment="Initial bot update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/commands/tickets/ticket.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/tickets/ticket.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/systems/birthday.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/birthday.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/systems/leveling.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/leveling.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/systems/notifications.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/notifications.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/systems/tickets.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/tickets.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bot.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/bot.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,7 +90,8 @@
       <workItem from="1784630525212" duration="176000" />
       <workItem from="1785093621608" duration="4324000" />
       <workItem from="1785105417648" duration="640000" />
-      <workItem from="1785150353613" duration="1779000" />
+      <workItem from="1785150353613" duration="1942000" />
+      <workItem from="1785152351697" duration="56000" />
     </task>
     <task id="LOCAL-00001" summary="workspace.xml and ready.js changes">
       <option name="closed" value="true" />
