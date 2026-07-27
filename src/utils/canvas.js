@@ -1,7 +1,19 @@
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+const path = require('path');
+
+// Rejestracja pliku TTF pod nazwą "Bryndan Write"
+GlobalFonts.registerFromPath(
+    path.join(__dirname, '../assets/fonts/BryndanWriteBook-nGPM.ttf'),
+    'Bryndan Write'
+);
 
 const CARD_WIDTH = 934;
 const CARD_HEIGHT = 282;
+
+const FONTS = {
+  main: '"Bryndan Write", sans-serif',
+  clean: 'system-ui, -apple-system, sans-serif'
+};
 
 const COLORS = {
   background: '#161a6f',
@@ -21,6 +33,7 @@ async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const ctx = canvas.getContext('2d');
 
+  // Background Gradient
   const bgGradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
   bgGradient.addColorStop(0, COLORS.background);
   bgGradient.addColorStop(1, COLORS.backgroundAlt);
@@ -28,6 +41,7 @@ async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }
   roundRect(ctx, 0, 0, CARD_WIDTH, CARD_HEIGHT, 20);
   ctx.fill();
 
+  // Side Bar
   const sideGrad = ctx.createLinearGradient(0, 0, 0, CARD_HEIGHT);
   sideGrad.addColorStop(0, COLORS.accent);
   sideGrad.addColorStop(1, COLORS.accentLight);
@@ -35,11 +49,13 @@ async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }
   roundRect(ctx, 0, 0, 8, CARD_HEIGHT, [20, 0, 0, 20]);
   ctx.fill();
 
+  // Glow Circle
   ctx.fillStyle = 'rgba(56, 182, 255, 0.05)';
   ctx.beginPath();
   ctx.arc(CARD_WIDTH - 100, CARD_HEIGHT / 2, 130, 0, Math.PI * 2);
   ctx.fill();
 
+  // Avatar
   const avatarX = 50, avatarY = CARD_HEIGHT / 2, avatarRadius = 85;
   try {
     const avatarURL = user.displayAvatarURL({ extension: 'png', size: 256 });
@@ -68,16 +84,19 @@ async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }
   const contentX = avatarX + avatarRadius * 2 + 30;
   const contentWidth = CARD_WIDTH - contentX - 40;
 
-  ctx.font = 'bold 36px sans-serif';
+  // Username (Bryndan Write)
+  ctx.font = `bold 42px ${FONTS.main}`;
   ctx.fillStyle = COLORS.textPrimary;
-  ctx.fillText(user.username, contentX, 80);
+  ctx.fillText(user.username, contentX, 78);
 
-  ctx.font = '22px sans-serif';
+  // XP Progress Text (Clean Font)
+  ctx.font = `18px ${FONTS.clean}`;
   ctx.fillStyle = COLORS.textSecondary;
   const xpText = `${xp} / ${nextLevelXp} XP`;
   const xpTextWidth = ctx.measureText(xpText).width;
-  ctx.fillText(xpText, CARD_WIDTH - xpTextWidth - 40, 80);
+  ctx.fillText(xpText, CARD_WIDTH - xpTextWidth - 40, 78);
 
+  // XP Progress Bar
   const barY = 110, barHeight = 28, barX = contentX, barWidth = contentWidth;
   const progress = Math.min(xp / nextLevelXp, 1);
   ctx.fillStyle = COLORS.barBg;
@@ -99,14 +118,16 @@ async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }
     ctx.shadowBlur = 0;
   }
 
+  // Stats Breakdown
   const statsY = 175, statSpacing = contentWidth / 3;
   drawStat(ctx, contentX, statsY, 'RANK', `#${rank}`, COLORS.accentLight);
   drawStat(ctx, contentX + statSpacing, statsY, 'LEVEL', String(level), COLORS.accentLight);
   drawStat(ctx, contentX + statSpacing * 2, statsY, 'TOTAL XP', formatNumber(totalXp), COLORS.accentLight);
 
+  // Milestone Badges
   const milestones = [5, 10, 20, 30, 40, 50];
   const badgeY = 240, badgeSpacing = 44, badgeStartX = contentX;
-  ctx.font = 'bold 12px sans-serif';
+
   milestones.forEach((milestone, i) => {
     const bx = badgeStartX + i * badgeSpacing;
     const reached = level >= milestone;
@@ -125,12 +146,15 @@ async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }
     ctx.arc(bx + 14, badgeY - 14, 14, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
+
+    ctx.font = `bold 13px ${FONTS.main}`;
     ctx.fillStyle = reached ? '#ffffff' : COLORS.textMuted;
     ctx.textAlign = 'center';
     ctx.fillText(milestone, bx + 14, badgeY - 9);
     ctx.textAlign = 'left';
   });
-  ctx.font = '13px sans-serif';
+
+  ctx.font = `13px ${FONTS.clean}`;
   ctx.fillStyle = COLORS.textMuted;
   ctx.fillText('milestone levels', badgeStartX + milestones.length * badgeSpacing + 10, badgeY - 9);
 
@@ -138,10 +162,13 @@ async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }
 }
 
 function drawStat(ctx, x, y, label, value, valueColor) {
-  ctx.font = '13px sans-serif';
+  // Label (Clean Font)
+  ctx.font = `12px ${FONTS.clean}`;
   ctx.fillStyle = '#6f7bb0';
   ctx.fillText(label, x, y);
-  ctx.font = 'bold 28px sans-serif';
+
+  // Value (Bryndan Write)
+  ctx.font = `bold 32px ${FONTS.main}`;
   ctx.fillStyle = valueColor;
   ctx.fillText(value, x, y + 30);
 }
