@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { getUser, addXP, setLevel, getConfig, getAchievements, grantAchievement, hasAchievement } = require('../database/db');
 
-const LEVEL_ROLES = [5, 10, 20, 30, 40, 50];
+const LEVEL_ROLES = [5, 10, 20, 30, 40, 50, 100];
 const XP_PER_MESSAGE = 4;
 
 function calculateLevel(totalXp) {
