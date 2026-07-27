@@ -28,6 +28,7 @@ module.exports = {
       'level-role-5': 'level_role_5', 'level-role-10': 'level_role_10',
       'level-role-20': 'level_role_20', 'level-role-30': 'level_role_30',
       'level-role-40': 'level_role_40', 'level-role-50': 'level_role_50',
+      'level-role-100': 'level_role_100', // 👈 DODANO LEVEL 100
     };
     const valueConfigs = {
       'prefix': 'prefix', 'yt-channel-id': 'yt_channel_id',
@@ -161,7 +162,8 @@ module.exports = {
           'yt-ping-role': 'yt_ping_role', 'twitch-ping-role': 'twitch_ping_role',
           'level-role-5': 'level_role_5', 'level-role-10': 'level_role_10',
           'level-role-20': 'level_role_20', 'level-role-30': 'level_role_30',
-          'level-role-40': 'level_role_40', 'level-role-50': 'level_role_50'
+          'level-role-40': 'level_role_40', 'level-role-50': 'level_role_50',
+          'level-role-100': 'level_role_100' // 👈 DODANO LEVEL 100 DO WIDOKU
         },
         '🔧 Values': {
           'prefix': 'prefix', 'yt-channel-id': 'yt_channel_id', 'twitch-username': 'twitch_username',
@@ -181,7 +183,6 @@ module.exports = {
               const val = await getConfig(message.guild.id, key);
               if (!val || val === 'not set') return `**${label}:** _not set_`;
 
-              // FIXED: Added check to ignore 'channel_id' so string values aren't bracket-wrapped
               if ((key.includes('channel') || key.includes('category')) && !key.includes('channel_id')) {
                 return `**${label}:** <#${val}>`;
               } else if (key.includes('role')) {
@@ -230,7 +231,7 @@ function showHelp(message, prefix) {
   const embed = new EmbedBuilder().setColor(0x7c3aed).setTitle('⚙️ Config Commands')
       .addFields(
           { name: '📢 Channels', value: `\`${prefix}config log-channel\` \`${prefix}config level-channel\`\n\`${prefix}config birthday-channel\` \`${prefix}config welcome-channel\`\n\`${prefix}config yt-channel-notify\` \`${prefix}config twitch-channel\`\n\`${prefix}config ticket-category\`` },
-          { name: '🎖️ Roles', value: `\`${prefix}config birthday-role\` \`${prefix}config mod-role\`\n\`${prefix}config trusted-fan-role\` \`${prefix}config level-role-5\` (also 10,20,30,40,50)\n\`${prefix}config yt-ping-role\` \`${prefix}config twitch-ping-role\`` },
+          { name: '🎖️ Roles', value: `\`${prefix}config birthday-role\` \`${prefix}config mod-role\`\n\`${prefix}config trusted-fan-role\` \`${prefix}config level-role-5\` (also 10,20,30,40,50,100)\n\`${prefix}config yt-ping-role\` \`${prefix}config twitch-ping-role\`` },
           { name: '🔧 Values', value: `\`${prefix}config prefix <symbol>\`\n\`${prefix}config yt-channel-id <id>\` \`${prefix}config twitch-username <name>\`\n\`${prefix}config trusted-fan-threshold <number>\`` },
           { name: '🚫 AutoMod', value: `\`${prefix}config bannedword add/remove/list <word>\`\n\`${prefix}config allowlinks add/remove/list #channel\`` },
           { name: '💬 Command Channels', value: `\`${prefix}config cmdchannel add/remove/list #channel\`` },

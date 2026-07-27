@@ -125,7 +125,7 @@ async function generateLevelCard({ user, xp, nextLevelXp, level, rank, totalXp }
   drawStat(ctx, contentX + statSpacing * 2, statsY, 'TOTAL XP', formatNumber(totalXp), COLORS.accentLight);
 
   // Milestone Badges
-  const milestones = [5, 10, 20, 30, 40, 50];
+  const milestones = [5, 10, 20, 30, 40, 50, 100];
   const badgeY = 240, badgeSpacing = 44, badgeStartX = contentX;
 
   milestones.forEach((milestone, i) => {
