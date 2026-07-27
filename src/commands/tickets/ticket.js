@@ -15,7 +15,8 @@ module.exports = {
       if (!requirePerms(message, PermissionFlagsBits.ManageGuild)) return;
       await message.delete().catch(() => {});
       await message.channel.send({
-        embeds: [new EmbedBuilder().setColor(0x7c3aed).setTitle('🎫 Support Tickets').setDescription('Click the button below to open a support ticket.').setFooter({ text: message.guild.name })],
+        embeds: [new EmbedBuilder().setColor(0x7c3aed).setTitle('🎫 Support Tickets').setDescription('Click the button below to open a support ticket.\n' +
+            'Our staff team will assist you as soon as possible').setFooter({ text: message.guild.name })],
         components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('ticket_open_panel').setLabel('📩 Open a Ticket').setStyle(ButtonStyle.Primary))],
       });
       return;

@@ -87,18 +87,16 @@ async function handleLevelUp(message, client, newLevel, totalXp) {
         message.channel;
   }
 
-  const embed = new EmbedBuilder()
-      .setColor(0x7c3aed).setTitle('🎉 Level Up!')
-      .setDescription(`Awooo! ${message.author} just progressed to **Level ${newLevel}**! ⚡`)
-      .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-      .setFooter({ text: `Total XP: ${totalXp.toLocaleString()}` }).setTimestamp();
+  let messageContent = `LET'S GO ${message.author}! You just advanced to **Level ${newLevel}**! 🎉`;
 
   if (LEVEL_ROLES.includes(newLevel)) {
     const roleId = await getConfig(guild.id, `level_role_${newLevel}`);
-    if (roleId) embed.addFields({ name: '🎖️ Role Reward', value: `<@&${roleId}>`, inline: true });
+    if (roleId) {
+      messageContent += ` You unlocked <@&${roleId}>! 🎖️`;
+    }
   }
 
-  await targetChannel.send({ content: `🎉 ${message.author}`, embeds: [embed] }).catch(() => {});
+  await targetChannel.send({ content: messageContent }).catch(() => {});
 }
 
 async function checkAchievements(message, client, userData) {

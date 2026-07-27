@@ -33,20 +33,7 @@ async function checkBirthdays(client) {
       continue;
     }
 
-// src/systems/birthday.js
-    const embed = new EmbedBuilder()
-        .setColor(0xf472b6)
-        .setTitle(`🎂 Happy Birthday ${member.displayName}!`) // Fixed: user.displayName -> member.displayName
-        .setDescription(`It's ${member}'s birthday today! Wish them well! 🥳🎉`)
-        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-        .setFooter({ text: `Leveling up in real life • From ${guild.name}` })
-        .setTimestamp();
-
-    // ✅ Pings the member directly outside the embed so they get notified
-    await channel.send({
-      content: `🎂 Happy Birthday ${member}!`,
-      embeds: [embed]
-    }).catch(() => {});
+    await channel.send({ content: `🎂 Happy Birthday ${member}! Wish you the best! 🥳🎉` }).catch(() => {});
 
     const birthdayRoleId = await getConfig(bday.guild_id, 'birthday_role');
     if (birthdayRoleId) {

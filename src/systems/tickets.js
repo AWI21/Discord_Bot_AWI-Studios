@@ -27,8 +27,8 @@ async function openTicket(guild, user, client) {
   await createTicket(channel.id, guild.id, user.id);
 
   const embed = new EmbedBuilder().setColor(0x7c3aed).setTitle('🎫 Support Ticket')
-    .setDescription(`Hello ${user}, welcome to your support ticket!\nPlease describe your issue and a staff member will assist you shortly.`)
-    .addFields({ name: '📋 Instructions', value: 'Be clear and detailed.\nDo not ping staff unnecessarily.' })
+    .setDescription(`Hello ${user}, welcome to your support ticket!\nPlease describe your issue and a staff member will assist you shortly!`)
+    .addFields({ name: '📋 Instructions', value: 'Be clear and detailed.\nDo not ping staff unnecessarily.'})
     .setFooter({ text: `Ticket #${count.toString().padStart(4, '0')}` }).setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
