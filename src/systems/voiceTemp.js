@@ -29,12 +29,14 @@ function setTempChannelOwner(voiceId, newOwnerId) {
 
 async function handleVoiceStateUpdate(oldState, newState) {
     const { guild, member } = newState;
-    if (!guild) return;
+    if (!guild || !member || member.user.bot) return;
 
-    const jtcChannelId = await getConfig(guild.id, 'jtc_channel_id');
+    const jtcChannelId = (await getConfig(guild.id, 'jtc_channel_id')) || (await getConfig(guild.id, 'jtc_channel'));
+    if (!jtcChannelId) return;
+
     const nameTemplate = (await getConfig(guild.id, 'jtc_name_template')) || "{user}'s Channel";
 
-    if (newState.channelId && newState.channelId === jtcChannelId) {
+    if (newState.channelId && String(newState.channelId) === String(jtcChannelId)) {
         const triggerChannel = newState.channel;
         const rawName = nameTemplate.replace('{user}', member.displayName || member.user.username);
         const cleanTextName = rawName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
@@ -43,9 +45,9 @@ async function handleVoiceStateUpdate(oldState, newState) {
             const tempVoice = await guild.channels.create({
                 name: `🔒 ${rawName}`,
                 type: ChannelType.GuildVoice,
-                parent: triggerChannel.parentId,
-                bitrate: triggerChannel.bitrate,
-                userLimit: triggerChannel.userLimit,
+                parent: triggerChannel?.parentId || null,
+                bitrate: triggerChannel?.bitrate || undefined,
+                userLimit: triggerChannel?.userLimit || undefined,
                 permissionOverwrites: [
                     {
                         id: guild.roles.everyone.id,
@@ -61,7 +63,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
             const tempText = await guild.channels.create({
                 name: `💬-${cleanTextName}`,
                 type: ChannelType.GuildText,
-                parent: triggerChannel.parentId,
+                parent: triggerChannel?.parentId || null,
                 permissionOverwrites: [
                     {
                         id: guild.roles.everyone.id,
@@ -97,7 +99,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
     if (oldState.channelId && isTempChannel(oldState.channelId) && oldState.channelId !== newState.channelId) {
         const oldVoice = oldState.channel;
-        const info = getTempChannelInfo(oldVoice.id);
+        const info = getTempChannelInfo(oldVoice?.id);
 
         if (oldVoice && info) {
             if (info.textId && member.id !== info.ownerId) {
