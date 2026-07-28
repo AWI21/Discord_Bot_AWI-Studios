@@ -173,6 +173,7 @@ async function handleVoiceCommand(interaction) {
 }
 
 module.exports = {
+    name: 'voice',
     data: slashData,
     slashData,
     execute: handleVoiceCommand,
