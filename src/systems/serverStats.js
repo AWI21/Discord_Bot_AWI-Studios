@@ -61,9 +61,9 @@ async function applyStatsUpdate(guild) {
     const humansChannel = humansId && guild.channels.cache.get(humansId);
     const botsChannel = botsId && guild.channels.cache.get(botsId);
 
-    if (totalChannel) await totalChannel.setName(`👥 Members: ${total}`).catch(() => {});
-    if (humansChannel) await humansChannel.setName(`✅ Humans: ${humans}`).catch(() => {});
-    if (botsChannel) await botsChannel.setName(`🤖 Bots: ${bots}`).catch(() => {});
+    if (totalChannel) await totalChannel.setName(`👥┃Members: ${total}`).catch(() => {});
+    if (humansChannel) await humansChannel.setName(`✅┃Humans: ${humans}`).catch(() => {});
+    if (botsChannel) await botsChannel.setName(`🤖┃Bots: ${bots}`).catch(() => {});
 }
 
 module.exports = { setupStatsChannels, updateStatsChannels };
