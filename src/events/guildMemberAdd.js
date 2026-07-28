@@ -1,3 +1,4 @@
+const config = require('../config.js');
 const { EmbedBuilder } = require('discord.js');
 const { getAutoRoles, getConfig } = require('../database/db');
 const { logAction } = require('../utils/logger');
@@ -15,9 +16,22 @@ module.exports = {
     if (welcomeChannel) {
       const channel = member.guild.channels.cache.get(welcomeChannel);
       if (channel) {
-        const embed = new EmbedBuilder().setColor(0x7c3aed).setTitle('🐺 New Pack Member!')
-          .setDescription(`Welcome to **${member.guild.name}**, ${member}!\nYou are member **#${member.guild.memberCount}**.`)
-          .setThumbnail(member.user.displayAvatarURL({ dynamic: true })).setTimestamp();
+        const customMsg = await getConfig(member.guild.id, 'welcome_msg');
+        const template = customMsg || config.welcomeMsg || "Welcome to **{guildName}**, {user}!\nYou are member **#{memberCount}**.";
+
+        const messageContent = config.formatMsg(template, {
+          user: member.toString(),
+          guildName: member.guild.name,
+          memberCount: member.guild.memberCount
+        });
+
+        const embed = new EmbedBuilder()
+            .setColor(config.color)
+            .setTitle('🐺 New Pack Member!')
+            .setDescription(messageContent)
+            .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+            .setTimestamp();
+
         await channel.send({ embeds: [embed] }).catch(() => {});
       }
     }

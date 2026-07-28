@@ -1,3 +1,4 @@
+const config = require('../config.js');
 const express = require('express');
 const chalk = require('chalk');
 
@@ -7,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
-    bot: 'Wolfy',
+    bot: config.botName, // TODO mwi
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });

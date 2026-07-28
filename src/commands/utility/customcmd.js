@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { addCustomCommand, removeCustomCommand, getAllCustomCommands } = require('../../database/db');
 const { successEmbed, errorEmbed, requirePerms } = require('../../utils/helpers');
@@ -117,6 +118,6 @@ module.exports = {
 
 async function buildListEmbed(guild, prefix) {
   const cmds = await getAllCustomCommands(guild.id);
-  return new EmbedBuilder().setColor(0x7c3aed).setTitle(`🔧 Custom Commands (${cmds.length})`)
+  return new EmbedBuilder().setColor(config.color).setTitle(`🔧 Custom Commands (${cmds.length})`)
       .setDescription(cmds.length ? cmds.map(c => `\`${prefix}${c.trigger}\` ${c.cooldown ? `⏱️${c.cooldown}s ` : ''}${c.allowed_roles ? '🔒' : ''} → ${c.response.substring(0, 45)}...`).join('\n') : 'No custom commands yet.');
 }

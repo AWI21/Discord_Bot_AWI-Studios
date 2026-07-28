@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
@@ -10,7 +11,7 @@ module.exports = {
 
 async function buildEmbed(guild) {
   await guild.fetch();
-  const embed = new EmbedBuilder().setColor(0x7c3aed).setTitle(guild.name).setThumbnail(guild.iconURL({ dynamic: true }))
+  const embed = new EmbedBuilder().setColor(config.color).setTitle(guild.name).setThumbnail(guild.iconURL({ dynamic: true }))
     .addFields(
       { name: '👑 Owner', value: `<@${guild.ownerId}>`, inline: true },
       { name: '👥 Members', value: String(guild.memberCount), inline: true },

@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { openTicket } = require('../../systems/tickets');
 const { requirePerms } = require('../../utils/helpers');
@@ -57,7 +58,7 @@ module.exports = {
       }
 
       const panelEmbed = new EmbedBuilder()
-          .setColor(0x7c3aed)
+          .setColor(config.color)
           .setTitle(title)
           .setDescription(description)
           .setFooter({ text: message.guild.name });
@@ -93,7 +94,7 @@ module.exports = {
       const customDesc = rawDesc ? rawDesc.replace(/\\n/g, '\n') : DEFAULT_DESC;
 
       const panelEmbed = new EmbedBuilder()
-          .setColor(0x7c3aed)
+          .setColor(config.color)
           .setTitle(customTitle)
           .setDescription(customDesc)
           .setFooter({ text: interaction.guild.name });

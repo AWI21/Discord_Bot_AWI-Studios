@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const { getUser, getUserRank, getWarnings, getVouches } = require('../../database/db');
 const { calculateLevel } = require('../../systems/leveling');
@@ -26,7 +27,7 @@ async function buildEmbed(target, guild) {
   const warnings = await getWarnings(target.id, guild.id);
   const vouches = await getVouches(target.id, guild.id);
   const roles = target.roles.cache.filter(r => r.id !== guild.id).sort((a, b) => b.position - a.position).first(5).map(r => r.toString()).join(', ') || 'None';
-  return new EmbedBuilder().setColor(target.displayColor || 0x7c3aed).setTitle(target.user.username)
+  return new EmbedBuilder().setColor(target.displayColor || config.color).setTitle(target.user.username)
     .setThumbnail(target.user.displayAvatarURL({ dynamic: true }))
     .addFields(
       { name: '🆔 ID', value: target.id, inline: true },

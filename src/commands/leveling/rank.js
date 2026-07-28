@@ -1,7 +1,6 @@
 const { AttachmentBuilder, SlashCommandBuilder } = require('discord.js');
 const { getUser, ensureUser, getUserRank } = require('../../database/db');
 const { generateLevelCard } = require('../../utils/canvas');
-// Import getRankStats alongside calculateLevel
 const { calculateLevel, getRankStats } = require('../../systems/leveling');
 
 module.exports = {
@@ -18,7 +17,7 @@ module.exports = {
     const attachment = await _genCard(target, message.guild);
     await loading.delete().catch(() => {});
     if (attachment) await message.reply({ files: [attachment] });
-    else await message.reply(`*Sniff...* Could not load level data for **${target.username}**`);
+    else await message.reply(`Could not load level data for **${target.username}**`);
   },
 
   async executeSlash(interaction) {
@@ -26,7 +25,7 @@ module.exports = {
     const target = interaction.options.getUser('user') || interaction.user;
     const attachment = await _genCard(target, interaction.guild);
     if (attachment) await interaction.editReply({ files: [attachment] });
-    else await interaction.editReply({ content: `*Sniff...* Could not load level data for **${target.username}**` });
+    else await interaction.editReply({ content: `Could not load level data for **${target.username}**` });
   },
 };
 
@@ -36,22 +35,20 @@ async function _genCard(target, guild) {
   const rank = await getUserRank(target.id, guild.id) || 0;
 
   const totalXp = userData?.xp || 0;
-  // Get all our precise, dynamic scaling metrics for this user
   const stats = getRankStats(totalXp);
 
   try {
-    // We pass the clean stats straight into the canvas generator
     const buffer = await generateLevelCard({
       user: target,
-      xp: stats.xpInCurrentLevel,              // Progress bar current value (e.g. 45 XP)
-      nextLevelXp: stats.xpRequiredForLevelGap, // Progress bar max value (e.g. 120 XP)
+      xp: stats.xpInCurrentLevel,
+      nextLevelXp: stats.xpRequiredForLevelGap,
       level: stats.level,
       rank,
-      totalXp: totalXp                         // Passed to fix the TOTAL XP block on the card
+      totalXp: totalXp
     });
     return new AttachmentBuilder(buffer, { name: 'rank.png' });
   } catch (error) {
-    console.error(error); // Log the error to console so you can track canvas bugs
+    console.error(error);
     return null;
   }
 }

@@ -1,10 +1,11 @@
+const config = require('../config.js');
 const { EmbedBuilder } = require('discord.js');
 const { getConfig } = require('../database/db');
 
 const ACTION_COLORS = {
-  ban: 0xef4444, kick: 0xf97316, mute: 0xf59e0b, unmute: 0x22c55e,
+  ban: config.errorColor, kick: 0xf97316, mute: 0xf59e0b, unmute: config.successColor,
   timeout: 0xfbbf24, deafen: 0x6366f1, warn: 0xeab308,
-  purge: 0x64748b, move: 0x06b6d4, role_add: 0x22c55e, role_remove: 0xef4444,
+  purge: 0x64748b, move: 0x06b6d4, role_add: config.successColor, role_remove: config.errorColor,
   slowmode: 0x8b5cf6, automod_word: 0xff6b6b, automod_link: 0xff9f43,
   automod_discord_link: 0xff4757, message_edit: 0x3498db, message_delete: 0xe74c3c,
   member_join: 0x2ecc71, role_update: 0x9b59b6,
@@ -25,7 +26,7 @@ async function logAction(guild, action, { moderator, target, reason, extra }) {
   if (!channel) return;
 
   const emoji = ACTION_EMOJIS[action] || '📋';
-  const color = ACTION_COLORS[action] || 0x7c3aed;
+  const color = ACTION_COLORS[action] || config.color;
   const title = action.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   const embed = new EmbedBuilder().setColor(color).setTitle(`${emoji} ${title}`).setTimestamp();

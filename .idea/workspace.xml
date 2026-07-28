@@ -5,7 +5,31 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9b3fc239-6a9e-49d3-b820-4d05bb0705d7" name="Changes" comment="Initial bot update">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bot.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/bot.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/config/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/config/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/leveling/leaderboard.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/leveling/leaderboard.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/leveling/rank.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/leveling/rank.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/ban.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/ban.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/moderation/warnings.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/moderation/warnings.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/roles/roles-setup.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/roles/roles-setup.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/commands/tickets/ticket.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/tickets/ticket.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/customcmd.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/customcmd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/embed.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/embed.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/help.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/help.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/ping.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/ping.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/serverinfo.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/serverinfo.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/utility/userinfo.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/utility/userinfo.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/events/clientReady.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/events/clientReady.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/events/guildMemberAdd.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/events/guildMemberAdd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/systems/birthday.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/birthday.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/systems/leveling.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/leveling.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/systems/notifications.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/notifications.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/systems/tickets.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/tickets.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/canvas.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/canvas.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/helpers.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/helpers.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/logger.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/logger.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/web/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/web/server.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,7 +124,8 @@
       <workItem from="1785152351697" duration="2376000" />
       <workItem from="1785158811100" duration="967000" />
       <workItem from="1785235762005" duration="1124000" />
-      <workItem from="1785236940852" duration="5077000" />
+      <workItem from="1785236940852" duration="5730000" />
+      <workItem from="1785251410805" duration="6242000" />
     </task>
     <task id="LOCAL-00001" summary="workspace.xml and ready.js changes">
       <option name="closed" value="true" />

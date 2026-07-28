@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { getUser, addXP, setLevel, getConfig, getAchievements, grantAchievement, hasAchievement } = require('../database/db');
+const config = require('../config');
 
 const LEVEL_ROLES = [5, 10, 20, 30, 40, 50, 100];
 const XP_PER_MESSAGE = 4;
@@ -12,7 +13,7 @@ function calculateLevel(totalXp) {
   while (totalXp >= accumulatedXp + xpNeededForNext) {
     accumulatedXp += xpNeededForNext;
     level++;
-    xpNeededForNext += 60; // Scaling factor: +60 each time
+    xpNeededForNext += 60;
   }
   return level;
 }
@@ -42,7 +43,6 @@ async function handleXP(message, client) {
 
   await addXP(message.author.id, message.guild.id, XP_PER_MESSAGE);
 
-  // Get the UPDATED data to see the new stats
   userData = await getUser(message.author.id, message.guild.id);
   const newLevel = calculateLevel(userData.xp);
 
@@ -56,10 +56,12 @@ async function handleXP(message, client) {
 
 async function handleLevelUp(message, client, newLevel, totalXp) {
   const guild = message.guild;
+  let unlockedRoleId = null;
 
   if (LEVEL_ROLES.includes(newLevel)) {
     const roleId = await getConfig(guild.id, `level_role_${newLevel}`);
     if (roleId) {
+      unlockedRoleId = roleId;
       const role = guild.roles.cache.get(roleId);
       const member = guild.members.cache.get(message.author.id);
       if (role && member) {
@@ -82,19 +84,22 @@ async function handleLevelUp(message, client, newLevel, totalXp) {
 
   if (levelChannelId) {
     const cleanId = levelChannelId.replace(/[<#>]/g, '');
-    targetChannel = guild.channels.cache.get(cleanId) ||
-        await guild.channels.fetch(cleanId).catch(() => null) ||
-        message.channel;
+    targetChannel = guild.channels.cache.get(cleanId) || await guild.channels.fetch(cleanId).catch(() => null) || message.channel;
   }
 
-  let messageContent = `LET'S GO ${message.author}! You just advanced to **Level ${newLevel}**! 🎉`;
+  const customMsg = await getConfig(guild.id, 'level_up_msg');
+  const template = customMsg || config.levelUpMsg || "LET'S GO {user}! You just advanced to **Level {level}**! 🎉{unlockedText}";
 
-  if (LEVEL_ROLES.includes(newLevel)) {
-    const roleId = await getConfig(guild.id, `level_role_${newLevel}`);
-    if (roleId) {
-      messageContent += ` You unlocked <@&${roleId}>! 🎖️`;
-    }
-  }
+  const roleMention = unlockedRoleId ? `<@&${unlockedRoleId}>` : '';
+  const unlockedText = unlockedRoleId ? ` You unlocked ${roleMention}! 🎖️` : '';
+
+  const messageContent = config.formatMsg(template, {
+    user: message.author.toString(),
+    level: newLevel,
+    role: roleMention,
+    unlockedText: unlockedText,
+    guildName: guild.name
+  });
 
   await targetChannel.send({ content: messageContent }).catch(() => {});
 }
@@ -118,10 +123,22 @@ async function checkAchievements(message, client, userData) {
 }
 
 async function notifyAchievement(message, client, achievement) {
+  const customMsg = await getConfig(message.guild.id, 'achievement_notif_msg');
+  const template = customMsg || config.achievementNotifMsg || "Milestone reached! {user}, you just unlocked the **{name}** achievement! 🏆\n> {description}";
+
+  const descriptionContent = config.formatMsg(template, {
+    user: message.author.toString(),
+    name: achievement.name,
+    description: achievement.description,
+    guildName: message.guild.name
+  });
+
   const embed = new EmbedBuilder()
-      .setColor(0xf59e0b).setTitle('🏆 Achievement Unlocked!')
-      .setDescription(`Milestone reached! ${message.author}, you just unlocked the ${achievement.name} achievement! 🏆\n> ${achievement.description}`)
-      .setThumbnail(message.author.displayAvatarURL({ dynamic: true })).setTimestamp();
+      .setColor(0xf59e0b)
+      .setTitle('🏆 Achievement Unlocked!')
+      .setDescription(descriptionContent)
+      .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+      .setTimestamp();
 
   if (achievement.reward_role_id) {
     const role = message.guild.roles.cache.get(achievement.reward_role_id);
@@ -140,15 +157,12 @@ async function notifyAchievement(message, client, achievement) {
 
   if (levelChannelId) {
     const cleanId = levelChannelId.replace(/[<#>]/g, '');
-    ch = message.guild.channels.cache.get(cleanId) ||
-        await message.guild.channels.fetch(cleanId).catch(() => null) ||
-        message.channel;
+    ch = message.guild.channels.cache.get(cleanId) || await message.guild.channels.fetch(cleanId).catch(() => null) || message.channel;
   }
 
   if (ch) await ch.send({ content: `🏆 ${message.author}`, embeds: [embed] }).catch(() => {});
 }
 
-// 🟩 Helper function for canvas rank cards
 function getRankStats(totalXp) {
   const level = calculateLevel(totalXp);
   const currentLevelStartXP = totalXpForLevel(level);
@@ -156,13 +170,12 @@ function getRankStats(totalXp) {
 
   return {
     level: level,
-    xpInCurrentLevel: totalXp - currentLevelStartXP,                 // Progress inside the current level bar
-    xpRequiredForLevelGap: nextLevelStartXP - currentLevelStartXP,   // Total width of the current level bar (120, 180, 240...)
-    totalNextLevelXP: nextLevelStartXP                              // Cumulative XP needed for next level
+    xpInCurrentLevel: totalXp - currentLevelStartXP,
+    xpRequiredForLevelGap: nextLevelStartXP - currentLevelStartXP,
+    totalNextLevelXP: nextLevelStartXP
   };
 }
 
-// 🟩 Updated exports containing the fixes
 module.exports = {
   handleXP,
   calculateLevel,

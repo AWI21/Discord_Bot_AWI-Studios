@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const {
     SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder,
     ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, MessageFlags,
@@ -55,7 +56,7 @@ module.exports = {
         const tooHigh = roles.find(r => r.position >= me.roles.highest.position);
         if (tooHigh) return interaction.editReply({ embeds: [errorEmbed(`**${tooHigh.name}** is higher than or equal to my highest role.`)] });
 
-        const embed = new EmbedBuilder().setColor(0x7c3aed).setTitle(title);
+        const embed = new EmbedBuilder().setColor(config.color).setTitle(title);
         if (description) embed.setDescription(description);
 
         if (sub === 'buttons') {

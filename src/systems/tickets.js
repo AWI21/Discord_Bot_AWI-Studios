@@ -1,3 +1,4 @@
+const config = require('../config.js');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, ChannelType, MessageFlags } = require('discord.js');
 const { createTicket, getTicket, updateTicketStatus, getConfig } = require('../database/db');
 
@@ -26,7 +27,7 @@ async function openTicket(guild, user, client) {
 
   await createTicket(channel.id, guild.id, user.id);
 
-  const embed = new EmbedBuilder().setColor(0x7c3aed).setTitle('🎫 Support Ticket')
+  const embed = new EmbedBuilder().setColor(config.color).setTitle('🎫 Support Ticket')
     .setDescription(`Hello ${user}, welcome to your support ticket!\nPlease describe your issue and a staff member will assist you shortly!`)
     .addFields({ name: '📋 Instructions', value: 'Be clear and detailed.\nDo not ping staff unnecessarily.'})
     .setFooter({ text: `Ticket #${count.toString().padStart(4, '0')}` }).setTimestamp();
@@ -66,7 +67,7 @@ async function handleTicketInteraction(interaction, client) {
     await updateTicketStatus(channel.id, 'open');
     const user = await guild.members.fetch(ticket.user_id).catch(() => null);
     if (user) await channel.permissionOverwrites.edit(user, { SendMessages: true }).catch(() => {});
-    const embed = new EmbedBuilder().setColor(0x22c55e).setTitle('🔓 Ticket Reopened').setDescription(`Reopened by ${member}`).setTimestamp();
+    const embed = new EmbedBuilder().setColor(config.successColor).setTitle('🔓 Ticket Reopened').setDescription(`Reopened by ${member}`).setTimestamp();
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('ticket_close').setLabel('🔒 Close').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete').setStyle(ButtonStyle.Danger),
@@ -79,7 +80,7 @@ async function handleTicketInteraction(interaction, client) {
     const logChannelId = await getConfig(guild.id, 'log_channel');
     if (logChannelId) {
       const logCh = guild.channels.cache.get(logChannelId);
-      if (logCh) await logCh.send({ embeds: [new EmbedBuilder().setColor(0xef4444).setTitle('🗑️ Ticket Deleted').addFields({ name: 'Channel', value: channel.name, inline: true }, { name: 'Opened By', value: `<@${ticket.user_id}>`, inline: true }, { name: 'Deleted By', value: `${member}`, inline: true }).setTimestamp()] }).catch(() => {});
+      if (logCh) await logCh.send({ embeds: [new EmbedBuilder().setColor(config.errorColor).setTitle('🗑️ Ticket Deleted').addFields({ name: 'Channel', value: channel.name, inline: true }, { name: 'Opened By', value: `<@${ticket.user_id}>`, inline: true }, { name: 'Deleted By', value: `${member}`, inline: true }).setTimestamp()] }).catch(() => {});
     }
     setTimeout(() => channel.delete().catch(() => {}), 5000);
   }

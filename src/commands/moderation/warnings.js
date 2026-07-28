@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { requirePerms, errorEmbed } = require('../../utils/helpers');
 const { getWarnings, clearWarnings, removeWarning } = require('../../database/db');
@@ -20,13 +21,13 @@ module.exports = {
       const t = message.mentions.members.first();
       if (!t) return message.reply({ embeds: [errorEmbed(`Usage: \`${prefix}warnings clear @user\``)] });
       clearWarnings(t.id, message.guild.id);
-      return message.reply({ embeds: [new EmbedBuilder().setColor(0x22c55e).setDescription(`✅ Cleared all warnings for **${t.user.tag}**.`)] });
+      return message.reply({ embeds: [new EmbedBuilder().setColor(config.successColor).setDescription(`✅ Cleared all warnings for **${t.user.tag}**.`)] });
     }
     if (sub === 'remove') {
       const id = parseInt(args[1]);
       if (!id) return message.reply({ embeds: [errorEmbed(`Usage: \`${prefix}warnings remove <id>\``)] });
       removeWarning(id);
-      return message.reply({ embeds: [new EmbedBuilder().setColor(0x22c55e).setDescription(`✅ Removed warning **#${id}**.`)] });
+      return message.reply({ embeds: [new EmbedBuilder().setColor(config.successColor).setDescription(`✅ Removed warning **#${id}**.`)] });
     }
     const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
     if (!target) return message.reply({ embeds: [errorEmbed(`Usage: \`${prefix}warnings @user\``)] });
@@ -44,12 +45,12 @@ module.exports = {
     if (sub === 'clear') {
       const target = interaction.options.getUser('user');
       clearWarnings(target.id, interaction.guild.id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(0x22c55e).setDescription(`✅ Cleared all warnings for **${target.tag}**.`)] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(config.successColor).setDescription(`✅ Cleared all warnings for **${target.tag}**.`)] });
     }
     if (sub === 'remove') {
       const id = interaction.options.getInteger('id');
       removeWarning(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(0x22c55e).setDescription(`✅ Removed warning **#${id}**.`)] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(config.successColor).setDescription(`✅ Removed warning **#${id}**.`)] });
     }
   },
 };

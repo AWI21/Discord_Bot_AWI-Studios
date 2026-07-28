@@ -1,3 +1,4 @@
+const config = require('../config.js');
 const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
 function requirePerms(message, ...perms) {
@@ -21,15 +22,15 @@ function requireBotPerms(message, ...perms) {
 }
 
 function errorEmbed(msg) {
-  return new EmbedBuilder().setColor(0xef4444).setDescription(`❌ ${msg}`);
+  return new EmbedBuilder().setColor(config.errorColor).setDescription(`❌ ${msg}`);
 }
 
 function successEmbed(msg) {
-  return new EmbedBuilder().setColor(0x22c55e).setDescription(`✅ ${msg}`);
+  return new EmbedBuilder().setColor(config.successColor).setDescription(`✅ ${msg}`);
 }
 
 function infoEmbed(msg) {
-  return new EmbedBuilder().setColor(0x7c3aed).setDescription(msg);
+  return new EmbedBuilder().setColor(config.color).setDescription(msg);
 }
 
 module.exports = { requirePerms, requireBotPerms, errorEmbed, successEmbed, infoEmbed };

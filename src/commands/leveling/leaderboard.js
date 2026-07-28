@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const { getLeaderboard } = require('../../database/db');
 const { calculateLevel } = require('../../systems/leveling');
@@ -18,8 +19,8 @@ module.exports = {
 
 async function buildEmbed(guild) {
   const top = await getLeaderboard(guild.id, 10);
-  if (!top.length) return new EmbedBuilder().setColor(0x7c3aed).setDescription('No users have gained XP yet!');
+  if (!top.length) return new EmbedBuilder().setColor(config.color).setDescription('No users have gained XP yet!');
   const medals = ['🥇', '🥈', '🥉'];
   const list = top.map((u, i) => `${medals[i] || `**${i + 1}.**`} <@${u.user_id}> — Level **${calculateLevel(u.xp)}** | **${u.xp.toLocaleString()}** XP`).join('\n');
-  return new EmbedBuilder().setColor(0x7c3aed).setTitle(`🐺 ${guild.name} — XP Leaderboard`).setDescription(list).setThumbnail(guild.iconURL({ dynamic: true })).setTimestamp();
+  return new EmbedBuilder().setColor(config.color).setTitle(`⭐ ${guild.name} — XP Leaderboard`).setDescription(list).setThumbnail(guild.iconURL({ dynamic: true })).setTimestamp();
 }

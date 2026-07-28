@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
@@ -14,7 +15,7 @@ module.exports = {
 };
 
 function buildEmbed(client, prefix) {
-  return new EmbedBuilder().setColor(0x7c3aed).setTitle('🐺 Wolfy — Command List')
+  return new EmbedBuilder().setColor(config.color).setTitle('🐺 Wolfy — Command List')
       .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
       .addFields(
           { name: '🔊 Temp Voice Channels', value: '`/voice lock` `/voice unlock` `/voice hide` `/voice reveal`\n`/voice rename` `/voice limit` `/voice kick` `/voice ban` `/voice claim` `/voice transfer`' },

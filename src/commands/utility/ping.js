@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
@@ -19,7 +20,7 @@ module.exports = {
 
 function buildEmbed(latency, apiPing) {
   return new EmbedBuilder()
-    .setColor(latency < 100 ? 0x22c55e : latency < 300 ? 0xf59e0b : 0xef4444)
+    .setColor(latency < 100 ? config.successColor : latency < 300 ? 0xf59e0b : config.errorColor)
     .setTitle('🏓 Pong!')
     .addFields({ name: '📡 Bot Latency', value: `${latency}ms`, inline: true }, { name: '💙 API Latency', value: `${apiPing}ms`, inline: true });
 }

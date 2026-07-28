@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { PermissionFlagsBits, EmbedBuilder, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { requirePerms, requireBotPerms, successEmbed, errorEmbed } = require('../../utils/helpers');
 const { logAction } = require('../../utils/logger');
@@ -37,7 +38,7 @@ module.exports = {
 };
 
 async function _doBan(guild, target, moderator, reason) {
-  await target.send({ embeds: [new EmbedBuilder().setColor(0xef4444).setTitle('🔨 You have been banned')
+  await target.send({ embeds: [new EmbedBuilder().setColor(config.errorColor).setTitle('🔨 You have been banned')
     .setDescription(`You have been **permanently banned** from **${guild.name}**.`)
     .addFields({ name: '📝 Reason', value: reason }, { name: '🛡️ Moderator', value: moderator.tag })
     .setTimestamp()] }).catch(() => {});

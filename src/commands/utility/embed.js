@@ -1,3 +1,4 @@
+const config = require('../../config.js');
 const { EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { requirePerms, errorEmbed } = require('../../utils/helpers');
 
@@ -19,7 +20,7 @@ module.exports = {
     if (!requirePerms(message, PermissionFlagsBits.ManageMessages)) return;
     const sub = args[0]?.toLowerCase();
     if (sub !== 'send') {
-      return message.reply({ embeds: [new EmbedBuilder().setColor(0x7c3aed).setTitle('📝 Embed Creator')
+      return message.reply({ embeds: [new EmbedBuilder().setColor(config.color).setTitle('📝 Embed Creator')
         .setDescription(`**Usage:**\n\`\`\`\n${prefix}embed send [#channel]\ntitle: Your Title\ndescription: Your text\ncolor: #7c3aed\nimage: https://...\nthumbnail: https://...\nfooter: Footer text\nfield: Name | Value | true\ntimestamp\n\`\`\``)
         .addFields({ name: 'Slash command', value: '`/embed` — fill in the fields directly!' })] });
     }
@@ -45,7 +46,7 @@ module.exports = {
     }
     if (!hasContent) return message.reply({ embeds: [errorEmbed('Your embed needs at least a title or description.')] });
     await targetChannel.send({ embeds: [embed] });
-    if (targetChannel.id !== message.channel.id) await message.reply({ embeds: [new EmbedBuilder().setColor(0x22c55e).setDescription(`✅ Embed sent to ${targetChannel}.`)] });
+    if (targetChannel.id !== message.channel.id) await message.reply({ embeds: [new EmbedBuilder().setColor(config.successColor).setDescription(`✅ Embed sent to ${targetChannel}.`)] });
     await message.delete().catch(() => {});
   },
 

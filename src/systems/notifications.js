@@ -1,6 +1,7 @@
 const axios = require('axios');
 const xml2js = require('xml2js');
 const { getConfig, hasPosted, markPosted } = require('../database/db');
+const config = require('../config');
 
 const POLL_INTERVAL = 5 * 60 * 1000;
 
@@ -70,16 +71,27 @@ async function pollYouTube(client, guild) {
       const link = latest.link?.[0]?.$?.href || `https://www.youtube.com/watch?v=${videoId}`;
       const author = latest.author?.[0]?.name?.[0] || 'YouTube';
 
-      const pingRole = (await getConfig(guild.id, 'yt_ping_role')) || '1528809155673194637';
+      const pingRole = await getConfig(guild.id, 'yt_ping_role');
 
-      let actionText = 'posted a video';
+      let actionText = 'uploaded a video';
       if (link.includes('/shorts/')) {
         actionText = 'posted a short';
       } else if (link.includes('live') || latest.isLive) {
         actionText = 'went live';
       }
 
-      const messageContent = `Hey <@&${pingRole}>, **${author}** just ${actionText}! Go check it out!\n${link}`;
+      // Check DB for server custom message -> fallback to config default
+      const customMsg = await getConfig(guild.id, 'yt_notif_msg');
+      const template = customMsg || config.ytNotifMsg;
+
+      const messageContent = config.formatMsg(template, {
+        pingRole,
+        author,
+        actionText,
+        title,
+        link,
+        guildName: guild.name
+      });
 
       await discordChannel.send({ content: messageContent });
       await markPosted(videoId, 'youtube', guild.id);
@@ -137,9 +149,20 @@ async function pollTwitch(client, guild) {
       const streamKey = `twitch_${stream.id}`;
       if (await hasPosted(streamKey, 'twitch', guild.id)) continue;
 
-      const pingRole = (await getConfig(guild.id, 'twitch_ping_role')) || '1528809155673194637';
+      const pingRole = await getConfig(guild.id, 'twitch_ping_role');
       const link = `https://twitch.tv/${twitchUser}`;
-      const messageContent = `Hey <@&${pingRole}>, **${stream.user_name || twitchUser}** just went live! Go check it out!\n${link}`;
+
+      const customMsg = await getConfig(guild.id, 'twitch_notif_msg');
+      const template = customMsg || config.twitchNotifMsg;
+
+      const messageContent = config.formatMsg(template, {
+        pingRole,
+        author: stream.user_name || twitchUser,
+        actionText: 'went live on Twitch',
+        title: stream.title || 'Live Stream',
+        link,
+        guildName: guild.name
+      });
 
       await discordChannel.send({ content: messageContent });
       await markPosted(streamKey, 'twitch', guild.id);

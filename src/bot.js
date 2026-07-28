@@ -25,9 +25,9 @@ client.cooldowns = new Collection();
 client.xpCooldowns = new Collection();
 
 async function startBot() {
-  console.log(chalk.cyan('\nStarting Wolfy Bot...\n'));
+  const botName = process.env.BOT_NAME || 'Wolfy Bot';
+  console.log(chalk.cyan(`\nStarting ${botName}...\n`));
 
-  // DB is async now — must await before anything else
   await initDatabase();
   await loadCommands(client);
   loadEvents(client);
