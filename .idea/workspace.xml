@@ -5,9 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9b3fc239-6a9e-49d3-b820-4d05bb0705d7" name="Changes" comment="Initial bot update">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/commands/config/stats-setup.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/config/stats-setup.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/systems/serverStats.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/systems/serverStats.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/tickets/ticket.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/tickets/ticket.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,7 +100,7 @@
       <workItem from="1785152351697" duration="2376000" />
       <workItem from="1785158811100" duration="967000" />
       <workItem from="1785235762005" duration="1124000" />
-      <workItem from="1785236940852" duration="4787000" />
+      <workItem from="1785236940852" duration="5077000" />
     </task>
     <task id="LOCAL-00001" summary="workspace.xml and ready.js changes">
       <option name="closed" value="true" />
