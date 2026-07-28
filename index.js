@@ -2,6 +2,8 @@ require('dotenv').config();
 const { startBot } = require('./src/bot');
 const { startWebServer } = require('./src/web/server');
 
+let client = null;
+
 async function init() {
     try {
         console.log("🐺 Starting Wolfy Bot...");
@@ -9,19 +11,27 @@ async function init() {
         // Start the web server first
         await startWebServer();
 
-        // Now start the bot (this is where the DB call is failing)
-        await startBot();
+        // Save bot client instance
+        client = await startBot();
 
     } catch (error) {
         console.error("❌ Failed to start:", error);
     }
 }
 
-// Add this to the very bottom of your index.js file
-process.on('SIGTERM', () => {
-    console.log('Received SIGTERM. Powering down old instance...');
-    client.destroy();
+const handleShutdown = async (signal) => {
+    console.log(`Received ${signal}. Powering down instance...`);
+    if (client) {
+        try {
+            await client.destroy();
+        } catch (err) {
+            console.error('Error destroying client:', err);
+        }
+    }
     process.exit(0);
-});
+};
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
 
 init();
