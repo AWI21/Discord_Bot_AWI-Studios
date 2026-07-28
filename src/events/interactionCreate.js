@@ -1,5 +1,6 @@
 const { MessageFlags } = require('discord.js');
 const { handleTicketInteraction, openTicket } = require('../systems/tickets');
+const { handleRoleButtonToggle, handleRoleSelectToggle } = require('../systems/roleMenus');
 
 module.exports = {
   name: 'interactionCreate',
@@ -38,6 +39,20 @@ module.exports = {
 
       if (interaction.customId.startsWith('ticket_')) {
         await handleTicketInteraction(interaction, client);
+        return;
+      }
+
+      if (interaction.customId.startsWith('wf_role_btn_')) {
+        await handleRoleButtonToggle(interaction);
+        return;
+      }
+      return;
+    }
+
+    // ── Select Menus ──────────────────────────────────────────────────────────────
+    if (interaction.isStringSelectMenu()) {
+      if (interaction.customId === 'wf_role_select') {
+        await handleRoleSelectToggle(interaction);
       }
     }
   },
