@@ -1,21 +1,50 @@
 const { ChannelType, PermissionFlagsBits } = require('discord.js');
 const { getConfig, setConfig } = require('../database/db');
 
-const COOLDOWN_MS = 10 * 60 * 1000;
+const COOLDOWN_MS = 10 * 60 * 1000; // 10 minut cooldownu na renamy kanałów
 const state = new Map();
 
-async function setupStatsChannels(guild) {
-    const category = await guild.channels.create({ name: '📊 Server Stats', type: ChannelType.GuildCategory });
-    const overwrites = [{ id: guild.roles.everyone.id, deny: [PermissionFlagsBits.Connect] }];
+const DEFAULT_TEMPLATES = {
+    all: '👥┃Members: {count}',
+    human: '✅┃Humans: {count}',
+    bots: '🤖┃Bots: {count}'
+};
 
-    const total = await guild.channels.create({ name: '👥 Members: 0', type: ChannelType.GuildVoice, parent: category.id, permissionOverwrites: overwrites });
-    const humans = await guild.channels.create({ name: '✅ Humans: 0', type: ChannelType.GuildVoice, parent: category.id, permissionOverwrites: overwrites });
-    const bots = await guild.channels.create({ name: '🤖 Bots: 0', type: ChannelType.GuildVoice, parent: category.id, permissionOverwrites: overwrites });
+async function setupStatChannel(guild, type, customTemplate = null) {
+    // 1. Sprawdzenie / Tworzenie kategorii
+    let categoryId = await getConfig(guild.id, 'stats_category');
+    let category = categoryId ? guild.channels.cache.get(categoryId) : null;
 
-    await setConfig(guild.id, 'stats_category', category.id);
-    await setConfig(guild.id, 'stats_total_channel', total.id);
-    await setConfig(guild.id, 'stats_humans_channel', humans.id);
-    await setConfig(guild.id, 'stats_bots_channel', bots.id);
+    if (!category) {
+        category = await guild.channels.create({
+            name: '📊 Server Stats',
+            type: ChannelType.GuildCategory
+        });
+        await setConfig(guild.id, 'stats_category', category.id);
+    }
+
+    const overwrites = [{ id: guild.roles.everyone.id, deny: [PermissionFlagsBits.Connect], allow: [PermissionFlagsBits.ViewChannel] }];
+
+    // Jeśli podano 'full' - tworzymy wszystkie 3 kanały
+    const typesToSetup = type === 'full' ? ['all', 'human', 'bots'] : [type];
+
+    for (const t of typesToSetup) {
+        const template = customTemplate || DEFAULT_TEMPLATES[t];
+        await setConfig(guild.id, `stats_${t}_template`, template);
+
+        const existingId = await getConfig(guild.id, `stats_${t}_channel`);
+        let channel = existingId ? guild.channels.cache.get(existingId) : null;
+
+        if (!channel) {
+            channel = await guild.channels.create({
+                name: template.replace('{count}', '0'),
+                type: ChannelType.GuildVoice,
+                parent: category.id,
+                permissionOverwrites: overwrites
+            });
+            await setConfig(guild.id, `stats_${t}_channel`, channel.id);
+        }
+    }
 
     await updateStatsChannels(guild, true);
 }
@@ -47,23 +76,39 @@ async function updateStatsChannels(guild, force = false) {
 }
 
 async function applyStatsUpdate(guild) {
-    const totalId = await getConfig(guild.id, 'stats_total_channel');
-    const humansId = await getConfig(guild.id, 'stats_humans_channel');
-    const botsId = await getConfig(guild.id, 'stats_bots_channel');
-    if (!totalId && !humansId && !botsId) return;
+    const types = ['all', 'human', 'bots'];
+    let hasAnyChannel = false;
+
+    for (const t of types) {
+        const channelId = await getConfig(guild.id, `stats_${t}_channel`);
+        if (channelId) {
+            hasAnyChannel = true;
+            break;
+        }
+    }
+
+    if (!hasAnyChannel) return;
 
     await guild.members.fetch().catch(() => {});
     const total = guild.memberCount;
     const bots = guild.members.cache.filter(m => m.user.bot).size;
     const humans = total - bots;
+    const counts = { all: total, human: humans, bots: bots };
 
-    const totalChannel = totalId && guild.channels.cache.get(totalId);
-    const humansChannel = humansId && guild.channels.cache.get(humansId);
-    const botsChannel = botsId && guild.channels.cache.get(botsId);
+    for (const t of types) {
+        const channelId = await getConfig(guild.id, `stats_${t}_channel`);
+        if (!channelId) continue;
 
-    if (totalChannel) await totalChannel.setName(`👥┃Members: ${total}`).catch(() => {});
-    if (humansChannel) await humansChannel.setName(`✅┃Humans: ${humans}`).catch(() => {});
-    if (botsChannel) await botsChannel.setName(`🤖┃Bots: ${bots}`).catch(() => {});
+        const channel = guild.channels.cache.get(channelId);
+        if (!channel) continue;
+
+        const template = await getConfig(guild.id, `stats_${t}_template`) || DEFAULT_TEMPLATES[t];
+        const newName = template.includes('{count}') ? template.replace('{count}', counts[t]) : `${template}: ${counts[t]}`;
+
+        if (channel.name !== newName) {
+            await channel.setName(newName).catch(() => {});
+        }
+    }
 }
 
-module.exports = { setupStatsChannels, updateStatsChannels };
+module.exports = { setupStatChannel, updateStatsChannels };
