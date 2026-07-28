@@ -1,21 +1,29 @@
-const { ChannelType } = require('discord.js');
+const { ChannelType, PermissionFlagsBits } = require('discord.js');
 const { getConfig } = require('../database/db');
 
-// Mapuje channelId -> { ownerId }
 const tempChannels = new Map();
 
-// Helpery z zachowaniem kompatybilności
-function addTempChannel(id, ownerId) { tempChannels.set(id, { ownerId }); }
-function removeTempChannel(id) { tempChannels.delete(id); }
-function isTempChannel(id) { return tempChannels.has(id); }
+function addTempChannel(voiceId, textId, ownerId) {
+    tempChannels.set(voiceId, { voiceId, textId, ownerId });
+}
 
-// Nowe helpery do komend /voice
-function getTempChannelInfo(id) { return tempChannels.get(id); }
-function setTempChannelOwner(id, newOwnerId) {
-    const data = tempChannels.get(id);
+function removeTempChannel(voiceId) {
+    tempChannels.delete(voiceId);
+}
+
+function isTempChannel(voiceId) {
+    return tempChannels.has(voiceId);
+}
+
+function getTempChannelInfo(voiceId) {
+    return tempChannels.get(voiceId);
+}
+
+function setTempChannelOwner(voiceId, newOwnerId) {
+    const data = tempChannels.get(voiceId);
     if (data) {
         data.ownerId = newOwnerId;
-        tempChannels.set(id, data);
+        tempChannels.set(voiceId, data);
     }
 }
 
@@ -26,36 +34,87 @@ async function handleVoiceStateUpdate(oldState, newState) {
     const jtcChannelId = await getConfig(guild.id, 'jtc_channel_id');
     const nameTemplate = (await getConfig(guild.id, 'jtc_name_template')) || "{user}'s Channel";
 
-    // Wejście na kanał wyzwalający (JTC)
     if (newState.channelId && newState.channelId === jtcChannelId) {
         const triggerChannel = newState.channel;
-        const channelName = nameTemplate.replace('{user}', member.displayName || member.user.username);
+        const rawName = nameTemplate.replace('{user}', member.displayName || member.user.username);
+        const cleanTextName = rawName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
 
         try {
-            const tempChannel = await guild.channels.create({
-                name: channelName,
+            const tempVoice = await guild.channels.create({
+                name: `🔒 ${rawName}`,
                 type: ChannelType.GuildVoice,
                 parent: triggerChannel.parentId,
                 bitrate: triggerChannel.bitrate,
                 userLimit: triggerChannel.userLimit,
-                permissionOverwrites: triggerChannel.permissionOverwrites.cache.map(p => p.toJSON()),
+                permissionOverwrites: [
+                    {
+                        id: guild.roles.everyone.id,
+                        deny: [PermissionFlagsBits.Connect],
+                    },
+                    {
+                        id: member.id,
+                        allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ManageChannels],
+                    },
+                ],
             });
 
-            // Zapisujemy kanał wraz z właścicielem
-            addTempChannel(tempChannel.id, member.id);
-            await member.voice.setChannel(tempChannel);
+            const tempText = await guild.channels.create({
+                name: `💬-${cleanTextName}`,
+                type: ChannelType.GuildText,
+                parent: triggerChannel.parentId,
+                permissionOverwrites: [
+                    {
+                        id: guild.roles.everyone.id,
+                        deny: [PermissionFlagsBits.ViewChannel],
+                    },
+                    {
+                        id: member.id,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    },
+                ],
+            });
+
+            addTempChannel(tempVoice.id, tempText.id, member.id);
+            await member.voice.setChannel(tempVoice);
         } catch (err) {
-            console.error('Failed to create temp voice channel:', err);
+            console.error('Failed to create temp voice/text channels:', err);
         }
     }
 
-    // Wyjście z tymczasowego kanału
-    if (oldState.channelId && oldState.channelId !== newState.channelId) {
-        const oldChannel = oldState.channel;
-        if (oldChannel && isTempChannel(oldChannel.id)) {
-            if (oldChannel.members.size === 0) {
-                removeTempChannel(oldChannel.id);
-                await oldChannel.delete().catch(() => {});
+    if (newState.channelId && isTempChannel(newState.channelId) && newState.channelId !== oldState.channelId) {
+        const info = getTempChannelInfo(newState.channelId);
+        if (info?.textId) {
+            const textChan = guild.channels.cache.get(info.textId);
+            if (textChan) {
+                await textChan.permissionOverwrites.edit(member.id, {
+                    ViewChannel: true,
+                    SendMessages: true,
+                    ReadMessageHistory: true,
+                }).catch(() => {});
+            }
+        }
+    }
+
+    if (oldState.channelId && isTempChannel(oldState.channelId) && oldState.channelId !== newState.channelId) {
+        const oldVoice = oldState.channel;
+        const info = getTempChannelInfo(oldVoice.id);
+
+        if (oldVoice && info) {
+            if (info.textId && member.id !== info.ownerId) {
+                const textChan = guild.channels.cache.get(info.textId);
+                if (textChan) {
+                    await textChan.permissionOverwrites.delete(member.id).catch(() => {});
+                }
+            }
+
+            if (oldVoice.members.size === 0) {
+                removeTempChannel(oldVoice.id);
+
+                if (info.textId) {
+                    const textChan = guild.channels.cache.get(info.textId);
+                    if (textChan) await textChan.delete().catch(() => {});
+                }
+                await oldVoice.delete().catch(() => {});
             }
         }
     }
