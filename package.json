@@ -1,6 +1,6 @@
 {
   "name": "wolfy-bot",
-  "version": "3.3.7",
+  "version": "3.3.8",
   "description": "Wolfy - A full-featured Discord bot",
   "main": "index.js",
   "scripts": {
