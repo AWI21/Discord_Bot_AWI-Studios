@@ -13,7 +13,7 @@ module.exports = {
 
   async execute(message, args, client) {
     const target = message.mentions.users.first() || message.author;
-    const loading = await message.channel.send('🐺 Sniffing out your stats...');
+    const loading = await message.channel.send('Searching for your stats...');
     const attachment = await _genCard(target, message.guild);
     await loading.delete().catch(() => {});
     if (attachment) await message.reply({ files: [attachment] });

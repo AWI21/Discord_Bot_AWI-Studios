@@ -1,7 +1,7 @@
 const { ChannelType, PermissionFlagsBits } = require('discord.js');
 const { getConfig, setConfig } = require('../database/db');
 
-const COOLDOWN_MS = 10 * 60 * 1000; // 10 minut cooldownu na renamy kanałów
+const COOLDOWN_MS = 10 * 60 * 1000;
 const state = new Map();
 
 const DEFAULT_TEMPLATES = {
@@ -11,7 +11,7 @@ const DEFAULT_TEMPLATES = {
 };
 
 async function setupStatChannel(guild, type, customTemplate = null) {
-    // 1. Sprawdzenie / Tworzenie kategorii
+
     let categoryId = await getConfig(guild.id, 'stats_category');
     let category = categoryId ? guild.channels.cache.get(categoryId) : null;
 
@@ -25,7 +25,7 @@ async function setupStatChannel(guild, type, customTemplate = null) {
 
     const overwrites = [{ id: guild.roles.everyone.id, deny: [PermissionFlagsBits.Connect], allow: [PermissionFlagsBits.ViewChannel] }];
 
-    // Jeśli podano 'full' - tworzymy wszystkie 3 kanały
+
     const typesToSetup = type === 'full' ? ['all', 'human', 'bots'] : [type];
 
     for (const t of typesToSetup) {

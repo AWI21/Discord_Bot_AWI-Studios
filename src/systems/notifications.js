@@ -80,7 +80,7 @@ async function pollYouTube(client, guild) {
         actionText = 'went live';
       }
 
-      // Check DB for server custom message -> fallback to config default
+
       const customMsg = await getConfig(guild.id, 'yt_notif_msg');
       const template = customMsg || config.ytNotifMsg;
 

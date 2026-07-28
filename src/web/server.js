@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
-    bot: config.botName, // TODO mwi
+    bot: config.botName, 
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });

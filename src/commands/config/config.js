@@ -28,7 +28,7 @@ module.exports = {
       'level-role-5': 'level_role_5', 'level-role-10': 'level_role_10',
       'level-role-20': 'level_role_20', 'level-role-30': 'level_role_30',
       'level-role-40': 'level_role_40', 'level-role-50': 'level_role_50',
-      'level-role-100': 'level_role_100', // Wolf Legend
+      'level-role-100': 'level_role_100',
     };
     const valueConfigs = {
       'prefix': 'prefix', 'yt-channel-id': 'yt_channel_id',

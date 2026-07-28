@@ -1,7 +1,7 @@
 {
-  "name": "wolfy-bot",
+  "name": "awi-bot",
   "version": "3.4.0",
-  "description": "Wolfy - A full-featured Discord bot",
+  "description": "AWI Studios — Discord Bot Framework",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

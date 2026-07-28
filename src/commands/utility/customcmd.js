@@ -3,7 +3,6 @@ const { EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, MessageFlags } =
 const { addCustomCommand, removeCustomCommand, getAllCustomCommands } = require('../../database/db');
 const { successEmbed, errorEmbed, requirePerms } = require('../../utils/helpers');
 
-// Helper to parse duration strings like "30s", "2m", "1h" or raw numbers into seconds
 function parseCooldown(str) {
   if (!str) return 0;
   const match = str.match(/^(\d+)([smh])?$/i);
@@ -19,7 +18,7 @@ module.exports = {
   name: 'customcmd',
   aliases: ['cc', 'addcmd'],
 
-  // ── Slash Command Builder ──────────────────────────────────────────────────
+  
   slashData: new SlashCommandBuilder()
       .setName('customcmd').setDescription('Manage custom commands')
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
@@ -32,7 +31,7 @@ module.exports = {
           .addStringOption(o => o.setName('trigger').setDescription('Trigger to remove').setRequired(true)))
       .addSubcommand(s => s.setName('list').setDescription('List all custom commands')),
 
-  // ── Prefix Command Logic ───────────────────────────────────────────────────
+  
   async execute(message, args, client, prefix) {
     if (!requirePerms(message, PermissionFlagsBits.ManageGuild)) return;
     const sub = args[0]?.toLowerCase();
@@ -42,16 +41,16 @@ module.exports = {
       let cooldown = 0;
       let responseStartIndex = 2;
 
-      // Check if argument 2 is a time duration (e.g., 30s, 1m, 10)
+      
       if (args[2] && /^(\d+)([smh])?$/i.test(args[2])) {
         cooldown = parseCooldown(args[2]);
         responseStartIndex = 3;
       }
 
-      // Capture roles from mentions
+      
       const allowedRoles = message.mentions.roles.map(r => r.id);
 
-      // Get response text and strip role pings so they aren't part of text
+      
       let response = args.slice(responseStartIndex).join(' ').replace(/<@&\d+>/g, '').trim();
 
       if (!trigger || !response) {
@@ -88,7 +87,7 @@ module.exports = {
     return message.reply({ embeds: [await buildListEmbed(message.guild, prefix)] });
   },
 
-  // ── Slash Command Logic ────────────────────────────────────────────────────
+  
   async executeSlash(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const sub = interaction.options.getSubcommand();

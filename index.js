@@ -6,7 +6,7 @@ let client = null;
 
 async function init() {
     try {
-        console.log("🐺 Starting Wolfy Bot...");
+        console.log("Starting AWI Bot...");
 
         // Start the web server first
         await startWebServer();

@@ -18,7 +18,7 @@ async function handleAutomod(message, client) {
   const guildId = message.guild.id;
   const content = message.content;
 
-  // 1. Banned words
+
   const bannedWords = await getBannedWords(guildId);
   if (bannedWords.length) {
     const found = bannedWords.find(w => content.toLowerCase().includes(w));
@@ -31,7 +31,7 @@ async function handleAutomod(message, client) {
     }
   }
 
-  // 2. Discord invites — never allowed
+
   DISCORD_INVITE_REGEX.lastIndex = 0;
   if (DISCORD_INVITE_REGEX.test(content)) {
     await message.delete().catch(() => {});
@@ -41,7 +41,7 @@ async function handleAutomod(message, client) {
     return;
   }
 
-  // 3. General link filter
+
   URL_REGEX.lastIndex = 0;
   if (!URL_REGEX.test(content)) return;
 

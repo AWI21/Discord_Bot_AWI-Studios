@@ -44,7 +44,6 @@ module.exports = {
       if (!requirePerms(message, PermissionFlagsBits.ManageGuild)) return;
       await message.delete().catch(() => {});
 
-      // Obsługa podawania custom opisu przez wersję tekstową (np. !ticket panel Custom Title | Custom Desc)
       const input = args.slice(1).join(' ');
       let title = DEFAULT_TITLE;
       let description = DEFAULT_DESC;
@@ -74,7 +73,6 @@ module.exports = {
       return;
     }
 
-    // Domyślne tworzenie ticketu z komendy tekstowej (!ticket)
     const channel = await openTicket(message.guild, message.author, client);
     await message.reply({ content: `✅ Ticket created: ${channel}`, allowedMentions: { repliedUser: false } });
   },

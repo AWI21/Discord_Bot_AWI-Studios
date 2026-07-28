@@ -3,7 +3,7 @@ const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
   name: 'help',
-  slashData: new SlashCommandBuilder().setName('help').setDescription('Show all Wolfy commands'),
+  slashData: new SlashCommandBuilder().setName('help').setDescription('Show all bot commands'),
 
   async execute(message, args, client, prefix) {
     message.reply({ embeds: [buildEmbed(client, prefix)] });
@@ -15,7 +15,7 @@ module.exports = {
 };
 
 function buildEmbed(client, prefix) {
-  return new EmbedBuilder().setColor(config.color).setTitle('🐺 Wolfy — Command List')
+  return new EmbedBuilder().setColor(config.color).setTitle('Bots Command List')
       .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
       .addFields(
           { name: '🔊 Temp Voice Channels', value: '`/voice lock` `/voice unlock` `/voice hide` `/voice reveal`\n`/voice rename` `/voice limit` `/voice kick` `/voice ban` `/voice claim` `/voice transfer`' },
@@ -30,5 +30,5 @@ function buildEmbed(client, prefix) {
           { name: '⚙️ Config (Admin)', value: `\`${prefix}config help\`` },
           { name: 'ℹ️ Utility', value: `\`${prefix}ping\` \`${prefix}serverinfo\` \`${prefix}userinfo\`` },
       )
-      .setFooter({ text: `Prefix: ${prefix} | Wolfy Bot` }).setTimestamp();
+      .setFooter({ text: `Prefix: ${prefix} | AWI BOT by AWI Studios` }).setTimestamp();
 }

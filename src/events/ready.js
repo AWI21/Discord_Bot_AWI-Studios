@@ -4,7 +4,7 @@ module.exports = {
   name: 'clientReady',
   once: true,
   execute(client) {
-    console.log(chalk.magenta(`\n🐺 Wolfy is online as ${client.user.tag}`));
+    console.log(chalk.magenta(`\nBot is online as ${client.user.tag}`));
     console.log(chalk.gray(`   Serving ${client.guilds.cache.size} guild(s)\n`));
 
     const status = process.env.BOT_STATUS || 'Watching the pack 🐺';

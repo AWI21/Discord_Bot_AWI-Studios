@@ -7,7 +7,7 @@ module.exports = {
   async execute(interaction) {
     const client = interaction.client;
 
-    // ── Slash commands ────────────────────────────────────────────────────────────
+    
     if (interaction.isChatInputCommand()) {
       const command = client.commands?.get(interaction.commandName);
 
@@ -36,7 +36,7 @@ module.exports = {
       return;
     }
 
-    // ── Buttons ───────────────────────────────────────────────────────────────────
+    
     if (interaction.isButton()) {
       if (interaction.customId === 'ticket_open_panel') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -62,7 +62,7 @@ module.exports = {
       return;
     }
 
-    // ── Select Menus ──────────────────────────────────────────────────────────────
+    
     if (interaction.isStringSelectMenu()) {
       if (interaction.customId === 'wf_role_select') {
         await handleRoleSelectToggle(interaction);
