@@ -4,16 +4,29 @@ const { handleRoleButtonToggle, handleRoleSelectToggle } = require('../systems/r
 
 module.exports = {
   name: 'interactionCreate',
-  async execute(interaction, client) {
+  async execute(interaction) {
+    const client = interaction.client;
+
     // ── Slash commands ────────────────────────────────────────────────────────────
     if (interaction.isChatInputCommand()) {
-      const command = client.commands.get(interaction.commandName);
-      if (!command || !command.executeSlash) return;
+      const command = client.commands?.get(interaction.commandName);
+
+      if (!command) {
+        console.error(`❌ Slash command not found in client.commands: /${interaction.commandName}`);
+        return interaction.reply({ content: '❌ Command not found on bot server.', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+
+      const execFn = command.executeSlash || command.execute;
+      if (!execFn) {
+        console.error(`❌ Command /${interaction.commandName} has no valid execute function.`);
+        return interaction.reply({ content: '❌ Command execution handler missing.', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+
       try {
-        await command.executeSlash(interaction);
+        await execFn(interaction);
       } catch (err) {
         console.error(`Slash command error [/${interaction.commandName}]:`, err);
-        const reply = { content: '❌ An error occurred.', flags: MessageFlags.Ephemeral };
+        const reply = { content: '❌ An error occurred while executing the command.', flags: MessageFlags.Ephemeral };
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp(reply).catch(() => {});
         } else {
