@@ -1,5 +1,5 @@
 const { ChannelType } = require('discord.js');
-const { getConfig } = require('../db');
+const { getConfig } = require('../database/db');
 
 // Mapuje channelId -> { ownerId }
 const tempChannels = new Map();
