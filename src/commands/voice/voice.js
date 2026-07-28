@@ -86,14 +86,20 @@ async function handleVoiceCommand(interaction) {
                 return interaction.editReply({ content: `👑 You are now the owner of **${voiceChan.name}**!` });
 
             case 'lock':
-                await voiceChan.permissionOverwrites.edit(interaction.guild.roles.everyone, { Connect: false });
+                await voiceChan.permissionOverwrites.edit(interaction.guild.roles.everyone, {
+                    Connect: false,
+                    ViewChannel: true
+                });
                 if (!voiceChan.name.startsWith('🔒 ')) {
                     await voiceChan.setName(`🔒 ${voiceChan.name.replace(/^🔓\s*/, '')}`).catch(() => {});
                 }
-                return interaction.editReply({ content: `🔒 Locked **${voiceChan.name}**.` });
+                return interaction.editReply({ content: `🔒 Locked **${voiceChan.name}** (everyone can still see it).` });
 
             case 'unlock':
-                await voiceChan.permissionOverwrites.edit(interaction.guild.roles.everyone, { Connect: true });
+                await voiceChan.permissionOverwrites.edit(interaction.guild.roles.everyone, {
+                    Connect: true,
+                    ViewChannel: true
+                });
                 if (voiceChan.name.startsWith('🔒 ')) {
                     await voiceChan.setName(voiceChan.name.replace(/^🔒\s*/, '')).catch(() => {});
                 }
