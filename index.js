@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('./deploy-commands.js');
 const { startBot } = require('./src/bot');
 const { startWebServer } = require('./src/web/server');
 
