@@ -6,11 +6,18 @@ GlobalFonts.registerFromPath(
     'Bryndan Write'
 );
 
+GlobalFonts.registerFromPath(
+    path.join(__dirname, '../assets/fonts/uniform-rounded.otf'),
+    'Uniform Rounded'
+);
+
 const CARD_WIDTH = 934;
 const CARD_HEIGHT = 282;
 
 const FONTS = {
-  main: process.env.CANVAS_FONT_MAIN || '"Bryndan Write", sans-serif',
+  main: process.env.CANVAS_FONT_MAIN || '"Uniform Rounded", sans-serif',
+  bryndan: '"Bryndan Write", sans-serif',
+  uniform: '"Uniform Rounded", sans-serif',
   clean: process.env.CANVAS_FONT_CLEAN || 'system-ui, -apple-system, sans-serif'
 };
 
