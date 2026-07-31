@@ -2,7 +2,7 @@ require('dotenv').config();
 require('./deploy-commands.js');
 const { startBot } = require('./src/bot');
 const { startWebServer } = require('./src/web/server');
-const registerAdvancedLogs = require('./src/events/advancedLogs');
+const registerAdvancedLogs = require('src/utils/advancedLogs.js');
 
 let client = null;
 
