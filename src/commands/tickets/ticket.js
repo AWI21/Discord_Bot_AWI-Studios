@@ -1,7 +1,8 @@
 const config = require('../../config.js');
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, SlashCommandBuilder, ChannelType, MessageFlags } = require('discord.js');
 const { openTicket } = require('../../systems/tickets');
 const { requirePerms } = require('../../utils/helpers');
+const { setConfig } = require('../../database/db');
 
 const DEFAULT_TITLE = '🎫 Support Tickets';
 const DEFAULT_DESC = 'Click the button below to open a support ticket.\nOur staff team will assist you as soon as possible.';
@@ -13,6 +14,31 @@ const slashData = new SlashCommandBuilder()
         sub
             .setName('open')
             .setDescription('Open a new support ticket')
+    )
+    .addSubcommand(sub =>
+        sub
+            .setName('setup')
+            .setDescription('Configure ticket category, mod role, and logs')
+            .addChannelOption(opt =>
+                opt
+                    .setName('category')
+                    .setDescription('Select the CATEGORY where ticket channels will be created')
+                    .addChannelTypes(ChannelType.GuildCategory)
+                    .setRequired(true)
+            )
+            .addRoleOption(opt =>
+                opt
+                    .setName('mod_role')
+                    .setDescription('Staff/Mod role allowed to manage tickets')
+                    .setRequired(false)
+            )
+            .addChannelOption(opt =>
+                opt
+                    .setName('log_channel')
+                    .setDescription('Channel for deletion logs')
+                    .addChannelTypes(ChannelType.GuildText)
+                    .setRequired(false)
+            )
     )
     .addSubcommand(sub =>
         sub
@@ -79,6 +105,29 @@ module.exports = {
 
   async executeSlash(interaction) {
     const sub = interaction.options.getSubcommand();
+
+    if (sub === 'setup') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+        return interaction.reply({ content: '❌ You need `ManageGuild` permission to configure tickets.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const category = interaction.options.getChannel('category');
+      const modRole = interaction.options.getRole('mod_role');
+      const logChannel = interaction.options.getChannel('log_channel');
+
+      await setConfig(interaction.guild.id, 'ticket_category', category.id);
+      if (modRole) await setConfig(interaction.guild.id, 'mod_role', modRole.id);
+      if (logChannel) await setConfig(interaction.guild.id, 'log_channel', logChannel.id);
+
+      let responseText = `✅ **Ticket system successfully configured!**\n📁 **Category:** ${category.name}`;
+      if (modRole) responseText += `\n🛡️ **Staff Role:** ${modRole}`;
+      if (logChannel) responseText += `\n📜 **Logs Channel:** ${logChannel}`;
+
+      await interaction.editReply({ content: responseText });
+      return;
+    }
 
     if (sub === 'panel') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {

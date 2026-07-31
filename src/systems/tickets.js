@@ -8,13 +8,22 @@ async function openTicket(guild, user, client) {
   const count = (ticketCounter[guild.id] || 0) + 1;
   ticketCounter[guild.id] = count;
 
-  const supportCategory = await getConfig(guild.id, 'ticket_category');
+  const supportCategoryId = await getConfig(guild.id, 'ticket_category');
   const modRoleId = await getConfig(guild.id, 'mod_role');
+
+  // Weryfikujemy czy pobrane ID z bazy to na pewno kategoria
+  let parentCategory = undefined;
+  if (supportCategoryId) {
+    const category = guild.channels.cache.get(supportCategoryId) || await guild.channels.fetch(supportCategoryId).catch(() => null);
+    if (category && category.type === ChannelType.GuildCategory) {
+      parentCategory = category.id;
+    }
+  }
 
   const channel = await guild.channels.create({
     name: `ticket-${count.toString().padStart(4, '0')}-${user.username}`,
     type: ChannelType.GuildText,
-    parent: supportCategory || undefined,
+    parent: parentCategory,
     permissionOverwrites: [
       { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
       { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
@@ -28,13 +37,13 @@ async function openTicket(guild, user, client) {
   await createTicket(channel.id, guild.id, user.id);
 
   const embed = new EmbedBuilder().setColor(config.color).setTitle('🎫 Support Ticket')
-    .setDescription(`Hello ${user}, welcome to your support ticket!\nPlease describe your issue and a staff member will assist you shortly!`)
-    .addFields({ name: '📋 Instructions', value: 'Be clear and detailed.\nDo not ping staff unnecessarily.'})
-    .setFooter({ text: `Ticket #${count.toString().padStart(4, '0')}` }).setTimestamp();
+      .setDescription(`Hello ${user}, welcome to your support ticket!\nPlease describe your issue and a staff member will assist you shortly!`)
+      .addFields({ name: '📋 Instructions', value: 'Be clear and detailed.\nDo not ping staff unnecessarily.'})
+      .setFooter({ text: `Ticket #${count.toString().padStart(4, '0')}` }).setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_close').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete Ticket').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('ticket_close').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete Ticket').setStyle(ButtonStyle.Danger),
   );
 
   await channel.send({ content: `${user}`, embeds: [embed], components: [row] });
@@ -57,8 +66,8 @@ async function handleTicketInteraction(interaction, client) {
     if (user) await channel.permissionOverwrites.edit(user, { SendMessages: false }).catch(() => {});
     const embed = new EmbedBuilder().setColor(0xf59e0b).setTitle('🔒 Ticket Closed').setDescription(`Closed by ${member}\n\nOnly staff can now send messages.`).setTimestamp();
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('ticket_reopen').setLabel('🔓 Reopen').setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('ticket_reopen').setLabel('🔓 Reopen').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete').setStyle(ButtonStyle.Danger),
     );
     await interaction.update({ embeds: [embed], components: [row] });
 
@@ -69,8 +78,8 @@ async function handleTicketInteraction(interaction, client) {
     if (user) await channel.permissionOverwrites.edit(user, { SendMessages: true }).catch(() => {});
     const embed = new EmbedBuilder().setColor(config.successColor).setTitle('🔓 Ticket Reopened').setDescription(`Reopened by ${member}`).setTimestamp();
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('ticket_close').setLabel('🔒 Close').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('ticket_close').setLabel('🔒 Close').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete').setStyle(ButtonStyle.Danger),
     );
     await interaction.update({ embeds: [embed], components: [row] });
 
