@@ -88,18 +88,18 @@ async function handleLevelUp(message, client, newLevel, totalXp) {
   }
 
   const customMsg = await getConfig(guild.id, 'level_up_msg');
-  const template = customMsg || config.levelUpMsg || "LET'S GO {user}! You just advanced to **Level {level}**! 🎉{unlockedText}";
+  let template = customMsg || config.levelUpMsg || "LET'S GO {user}! You just advanced to **Level {level}**! 🎉{unlockedText}";
 
   const roleMention = unlockedRoleId ? `<@&${unlockedRoleId}>` : '';
   const unlockedText = unlockedRoleId ? ` You unlocked ${roleMention}! 🎖️` : '';
 
-  const messageContent = config.formatMsg(template, {
-    user: message.author.toString(),
-    level: newLevel,
-    role: roleMention,
-    unlockedText: unlockedText,
-    guildName: guild.name
-  });
+  const messageContent = template
+      .replaceAll('<@{user}>', '{user}')
+      .replaceAll('{user}', message.author.toString())
+      .replaceAll('{level}', newLevel.toString())
+      .replaceAll('{role}', roleMention)
+      .replaceAll('{unlockedText}', unlockedText)
+      .replaceAll('{guildName}', guild.name);
 
   await targetChannel.send({ content: messageContent }).catch(() => {});
 }
@@ -124,14 +124,14 @@ async function checkAchievements(message, client, userData) {
 
 async function notifyAchievement(message, client, achievement) {
   const customMsg = await getConfig(message.guild.id, 'achievement_notif_msg');
-  const template = customMsg || config.achievementNotifMsg || "Milestone reached! {user}, you just unlocked the **{name}** achievement! 🏆\n> {description}";
+  let template = customMsg || config.achievementNotifMsg || "Milestone reached! {user}, you just unlocked the **{name}** achievement! 🏆\n> {description}";
 
-  const descriptionContent = config.formatMsg(template, {
-    user: message.author.toString(),
-    name: achievement.name,
-    description: achievement.description,
-    guildName: message.guild.name
-  });
+  const descriptionContent = template
+      .replaceAll('<@{user}>', '{user}')
+      .replaceAll('{user}', message.author.toString())
+      .replaceAll('{name}', achievement.name)
+      .replaceAll('{description}', achievement.description)
+      .replaceAll('{guildName}', message.guild.name);
 
   const embed = new EmbedBuilder()
       .setColor(0xf59e0b)
@@ -157,7 +157,7 @@ async function notifyAchievement(message, client, achievement) {
 
   if (levelChannelId) {
     const cleanId = levelChannelId.replace(/[<#>]/g, '');
-    ch = message.guild.channels.cache.get(cleanId) || await message.guild.channels.fetch(cleanId).catch(() => null) || message.channel;
+    ch = message.guild.channels.cache.get(cleanId) || await message.guild.fetch(cleanId).catch(() => null) || message.channel;
   }
 
   if (ch) await ch.send({ content: `🏆 ${message.author}`, embeds: [embed] }).catch(() => {});
