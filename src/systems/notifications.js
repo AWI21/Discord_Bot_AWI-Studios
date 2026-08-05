@@ -72,6 +72,7 @@ async function pollYouTube(client, guild) {
       const author = latest.author?.[0]?.name?.[0] || 'YouTube';
 
       const pingRole = await getConfig(guild.id, 'yt_ping_role');
+      const roleMention = pingRole ? `<@&${pingRole}>` : '';
 
       let actionText = 'uploaded a video';
       if (link.includes('/shorts/')) {
@@ -80,18 +81,19 @@ async function pollYouTube(client, guild) {
         actionText = 'went live';
       }
 
-
       const customMsg = await getConfig(guild.id, 'yt_notif_msg');
-      const template = customMsg || config.ytNotifMsg;
+      let template = customMsg || config.ytNotifMsg || "🔴 Hey {role}, **{author}** just {actionText}! Go check it out!\n{url}";
 
-      const messageContent = config.formatMsg(template, {
-        pingRole,
-        author,
-        actionText,
-        title,
-        link,
-        guildName: guild.name
-      });
+      const messageContent = template
+          .replaceAll('\\n', '\n')
+          .replaceAll('<@{role}>', '{role}')
+          .replaceAll('{role}', roleMention)
+          .replaceAll('{author}', author)
+          .replaceAll('{actionText}', actionText)
+          .replaceAll('{title}', title)
+          .replaceAll('{link}', link)
+          .replaceAll('{url}', link)
+          .replaceAll('{guildName}', guild.name);
 
       await discordChannel.send({ content: messageContent });
       await markPosted(videoId, 'youtube', guild.id);
@@ -150,19 +152,23 @@ async function pollTwitch(client, guild) {
       if (await hasPosted(streamKey, 'twitch', guild.id)) continue;
 
       const pingRole = await getConfig(guild.id, 'twitch_ping_role');
+      const roleMention = pingRole ? `<@&${pingRole}>` : '';
       const link = `https://twitch.tv/${twitchUser}`;
+      const author = stream.user_name || twitchUser;
+      const title = stream.title || 'Live Stream';
 
       const customMsg = await getConfig(guild.id, 'twitch_notif_msg');
-      const template = customMsg || config.twitchNotifMsg;
+      let template = customMsg || config.twitchNotifMsg || "🟣 Hey {role}, **{author}** went live on Twitch!\n{url}";
 
-      const messageContent = config.formatMsg(template, {
-        pingRole,
-        author: stream.user_name || twitchUser,
-        actionText: 'went live on Twitch',
-        title: stream.title || 'Live Stream',
-        link,
-        guildName: guild.name
-      });
+      const messageContent = template
+          .replaceAll('\\n', '\n')
+          .replaceAll('<@{role}>', '{role}')
+          .replaceAll('{role}', roleMention)
+          .replaceAll('{author}', author)
+          .replaceAll('{title}', title)
+          .replaceAll('{link}', link)
+          .replaceAll('{url}', link)
+          .replaceAll('{guildName}', guild.name);
 
       await discordChannel.send({ content: messageContent });
       await markPosted(streamKey, 'twitch', guild.id);

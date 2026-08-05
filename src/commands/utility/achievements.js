@@ -6,16 +6,16 @@ module.exports = {
   name: 'achievements',
   aliases: ['ach'],
   slashData: new SlashCommandBuilder()
-    .setName('achievements').setDescription('View or manage achievements')
-    .addSubcommand(s => s.setName('list').setDescription('List all server achievements'))
-    .addSubcommand(s => s.setName('view').setDescription("View a user's achievements").addUserOption(o => o.setName('user').setDescription('Member').setRequired(true)))
-    .addSubcommand(s => s.setName('add').setDescription('Add achievement (Admin)')
-      .addStringOption(o => o.setName('name').setDescription('Name').setRequired(true))
-      .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true))
-      .addStringOption(o => o.setName('type').setDescription('Requirement type').setRequired(true).addChoices({ name: 'Messages', value: 'messages' }, { name: 'Level', value: 'level' }, { name: 'XP', value: 'xp' }))
-      .addIntegerOption(o => o.setName('value').setDescription('Required value').setRequired(true))
-      .addRoleOption(o => o.setName('role').setDescription('Role reward').setRequired(false))
-      .addIntegerOption(o => o.setName('xp_reward').setDescription('XP reward').setRequired(false))),
+      .setName('achievements').setDescription('View or manage achievements')
+      .addSubcommand(s => s.setName('list').setDescription('List all server achievements'))
+      .addSubcommand(s => s.setName('view').setDescription("View a user's achievements").addUserOption(o => o.setName('user').setDescription('Member').setRequired(true)))
+      .addSubcommand(s => s.setName('add').setDescription('Add achievement (Admin)')
+          .addStringOption(o => o.setName('name').setDescription('Name').setRequired(true))
+          .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true))
+          .addStringOption(o => o.setName('type').setDescription('Requirement type').setRequired(true).addChoices({ name: 'Messages', value: 'messages' }, { name: 'Level', value: 'level' }, { name: 'XP', value: 'xp' }))
+          .addIntegerOption(o => o.setName('value').setDescription('Required value').setRequired(true))
+          .addRoleOption(o => o.setName('role').setDescription('Role reward').setRequired(false))
+          .addIntegerOption(o => o.setName('xp_reward').setDescription('XP reward').setRequired(false))),
 
   async execute(message, args, client, prefix) {
     const sub = args[0]?.toLowerCase();
@@ -54,11 +54,11 @@ module.exports = {
 async function buildUserEmbed(user, guild) {
   const earned = await getUserAchievements(user.id, guild.id);
   return new EmbedBuilder().setColor(0xf59e0b).setTitle(`🏆 ${user.username}'s Achievements`).setThumbnail(user.displayAvatarURL({ dynamic: true }))
-    .setDescription(earned.length ? earned.map(a => `🏆 **${a.name}**\n${a.description}\n<t:${Math.floor(a.earned_at / 1000)}:R>`).join('\n\n') : 'No achievements earned yet.');
+      .setDescription(earned.length ? earned.map(a => `🏆 **${a.name}**\n${a.description}\n<t:${Math.floor(a.earned_at / 1000)}:R>`).join('\n\n') : 'No achievements earned yet.');
 }
 
 async function buildListEmbed(guild, prefix) {
   const all = await getAchievements(guild.id);
   return new EmbedBuilder().setColor(0xf59e0b).setTitle(`🏆 ${guild.name} — Achievements`)
-    .setDescription(all.length ? all.map(a => `**${a.name}** — ${a.description}\nRequires: **${a.requirement_value} ${a.requirement_type}**${a.reward_role_id ? ` | <@&${a.reward_role_id}>` : ''}${a.reward_xp ? ` | +${a.reward_xp} XP` : ''}`).join('\n\n') : `No achievements yet.`);
+      .setDescription(all.length ? all.map(a => `**${a.name}** — ${a.description}\nRequires: **${a.requirement_value} ${a.requirement_type}**${a.reward_role_id ? ` | <@&${a.reward_role_id}>` : ''}${a.reward_xp ? ` | +${a.reward_xp} XP` : ''}`).join('\n\n') : `No achievements yet.`);
 }
