@@ -2,8 +2,34 @@ const axios = require('axios');
 const xml2js = require('xml2js');
 const { getConfig, hasPosted, markPosted } = require('../database/db');
 const config = require('../config');
+const { formatTemplate, resolveChannel } = require('../utils/helpers');
 
 const POLL_INTERVAL = 5 * 60 * 1000;
+
+let twitchTokenCache = { token: null, expiresAt: 0 };
+
+async function getTwitchToken() {
+  if (twitchTokenCache.token && Date.now() < twitchTokenCache.expiresAt) {
+    return twitchTokenCache.token;
+  }
+  const tokenRes = await axios.post('https://id.twitch.tv/oauth2/token', null, {
+    params: {
+      client_id: process.env.TWITCH_CLIENT_ID,
+      client_secret: process.env.TWITCH_CLIENT_SECRET,
+      grant_type: 'client_credentials',
+    },
+    timeout: 10000,
+  });
+  twitchTokenCache = {
+    token: tokenRes.data.access_token,
+    expiresAt: Date.now() + Math.max(tokenRes.data.expires_in - 300, 60) * 1000,
+  };
+  return twitchTokenCache.token;
+}
+
+function invalidateTwitchToken() {
+  twitchTokenCache = { token: null, expiresAt: 0 };
+}
 
 function startNotificationPoller(client) {
   setTimeout(() => pollAll(client), 10_000);
@@ -27,9 +53,7 @@ async function pollYouTube(client, guild) {
 
   if (!channelIdsRaw || !notifChannelId) return;
 
-  const discordChannel = guild.channels.cache.get(notifChannelId) ||
-      await guild.channels.fetch(notifChannelId).catch(() => null);
-
+  const discordChannel = await resolveChannel(guild, notifChannelId);
   if (!discordChannel) return;
 
   const ytChannelIds = channelIdsRaw.split(',').map(s => s.trim()).filter(Boolean);
@@ -72,7 +96,6 @@ async function pollYouTube(client, guild) {
       const author = latest.author?.[0]?.name?.[0] || 'YouTube';
 
       const pingRole = await getConfig(guild.id, 'yt_ping_role');
-      const roleMention = pingRole ? `<@&${pingRole}>` : '';
 
       let actionText = 'uploaded a video';
       if (link.includes('/shorts/')) {
@@ -82,18 +105,16 @@ async function pollYouTube(client, guild) {
       }
 
       const customMsg = await getConfig(guild.id, 'yt_notif_msg');
-      let template = customMsg || config.ytNotifMsg || "🔴 Hey {role}, **{author}** just {actionText}! Go check it out!\n{url}";
+      const template = customMsg || config.ytNotifMsg;
 
-      const messageContent = template
-          .replaceAll('\\n', '\n')
-          .replaceAll('<@{role}>', '{role}')
-          .replaceAll('{role}', roleMention)
-          .replaceAll('{author}', author)
-          .replaceAll('{actionText}', actionText)
-          .replaceAll('{title}', title)
-          .replaceAll('{link}', link)
-          .replaceAll('{url}', link)
-          .replaceAll('{guildName}', guild.name);
+      const messageContent = formatTemplate(template, {
+        role: pingRole,
+        author,
+        actionText,
+        title,
+        link,
+        guildName: guild.name,
+      });
 
       await discordChannel.send({ content: messageContent });
       await markPosted(videoId, 'youtube', guild.id);
@@ -112,21 +133,12 @@ async function pollTwitch(client, guild) {
   if (!twitchUsersRaw || !notifChannelId) return;
   if (!process.env.TWITCH_CLIENT_ID || !process.env.TWITCH_CLIENT_SECRET) return;
 
-  const discordChannel = guild.channels.cache.get(notifChannelId) ||
-      await guild.channels.fetch(notifChannelId).catch(() => null);
+  const discordChannel = await resolveChannel(guild, notifChannelId);
   if (!discordChannel) return;
 
   let token;
   try {
-    const tokenRes = await axios.post('https://id.twitch.tv/oauth2/token', null, {
-      params: {
-        client_id: process.env.TWITCH_CLIENT_ID,
-        client_secret: process.env.TWITCH_CLIENT_SECRET,
-        grant_type: 'client_credentials',
-      },
-      timeout: 10000,
-    });
-    token = tokenRes.data.access_token;
+    token = await getTwitchToken();
   } catch (err) {
     console.error('[Twitch] Failed to acquire token:', err.message);
     return;
@@ -136,14 +148,20 @@ async function pollTwitch(client, guild) {
 
   for (const twitchUser of twitchUsers) {
     try {
-      const streamRes = await axios.get('https://api.twitch.tv/helix/streams', {
-        params: { user_login: twitchUser },
-        headers: {
-          'Client-ID': process.env.TWITCH_CLIENT_ID,
-          Authorization: `Bearer ${token}`,
-        },
-        timeout: 10000,
-      });
+      let streamRes;
+      try {
+        streamRes = await axios.get('https://api.twitch.tv/helix/streams', {
+          params: { user_login: twitchUser },
+          headers: {
+            'Client-ID': process.env.TWITCH_CLIENT_ID,
+            Authorization: `Bearer ${token}`,
+          },
+          timeout: 10000,
+        });
+      } catch (err) {
+        if (err.response?.status === 401) invalidateTwitchToken();
+        throw err;
+      }
 
       const stream = streamRes.data.data?.[0];
       if (!stream) continue;
@@ -152,23 +170,20 @@ async function pollTwitch(client, guild) {
       if (await hasPosted(streamKey, 'twitch', guild.id)) continue;
 
       const pingRole = await getConfig(guild.id, 'twitch_ping_role');
-      const roleMention = pingRole ? `<@&${pingRole}>` : '';
       const link = `https://twitch.tv/${twitchUser}`;
       const author = stream.user_name || twitchUser;
       const title = stream.title || 'Live Stream';
 
       const customMsg = await getConfig(guild.id, 'twitch_notif_msg');
-      let template = customMsg || config.twitchNotifMsg || "🟣 Hey {role}, **{author}** went live on Twitch!\n{url}";
+      const template = customMsg || config.twitchNotifMsg;
 
-      const messageContent = template
-          .replaceAll('\\n', '\n')
-          .replaceAll('<@{role}>', '{role}')
-          .replaceAll('{role}', roleMention)
-          .replaceAll('{author}', author)
-          .replaceAll('{title}', title)
-          .replaceAll('{link}', link)
-          .replaceAll('{url}', link)
-          .replaceAll('{guildName}', guild.name);
+      const messageContent = formatTemplate(template, {
+        role: pingRole,
+        author,
+        title,
+        link,
+        guildName: guild.name,
+      });
 
       await discordChannel.send({ content: messageContent });
       await markPosted(streamKey, 'twitch', guild.id);

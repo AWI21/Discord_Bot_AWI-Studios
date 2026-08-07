@@ -2,6 +2,7 @@ const config = require('../config.js');
 const { EmbedBuilder } = require('discord.js');
 const { getAutoRoles, getConfig } = require('../database/db');
 const { logAction } = require('../utils/logger');
+const { formatTemplate, resolveChannel } = require('../utils/helpers');
 
 module.exports = {
   name: 'guildMemberAdd',
@@ -12,28 +13,26 @@ module.exports = {
       if (role) await member.roles.add(role).catch(() => {});
     }
 
-    const welcomeChannel = await getConfig(member.guild.id, 'welcome_channel');
-    if (welcomeChannel) {
-      const channel = member.guild.channels.cache.get(welcomeChannel);
-      if (channel) {
-        const customMsg = await getConfig(member.guild.id, 'welcome_msg');
-        const template = customMsg || config.welcomeMsg || "Welcome to **{guildName}**, {user}!\nYou are member **#{memberCount}**.";
+    const welcomeChannelId = await getConfig(member.guild.id, 'welcome_channel');
+    const channel = await resolveChannel(member.guild, welcomeChannelId);
+    if (channel) {
+      const customMsg = await getConfig(member.guild.id, 'welcome_msg');
+      const template = customMsg || config.welcomeMsg;
 
-        const messageContent = config.formatMsg(template, {
-          user: member.toString(),
-          guildName: member.guild.name,
-          memberCount: member.guild.memberCount
-        });
+      const messageContent = formatTemplate(template, {
+        user: member,
+        guildName: member.guild.name,
+        memberCount: member.guild.memberCount,
+      });
 
-        const embed = new EmbedBuilder()
-            .setColor(config.color)
-            .setTitle('🐺 New Pack Member!')
-            .setDescription(messageContent)
-            .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-            .setTimestamp();
+      const embed = new EmbedBuilder()
+          .setColor(config.color)
+          .setTitle('New Member!')
+          .setDescription(messageContent)
+          .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+          .setTimestamp();
 
-        await channel.send({ embeds: [embed] }).catch(() => {});
-      }
+      await channel.send({ embeds: [embed] }).catch(() => {});
     }
 
     await logAction(member.guild, 'member_join', {

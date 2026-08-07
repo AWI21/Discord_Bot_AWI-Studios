@@ -1,7 +1,7 @@
 const cron = require('node-cron');
-const { EmbedBuilder } = require('discord.js');
 const { getTodayBirthdays, getConfig } = require('../database/db');
 const config = require('../config');
+const { formatTemplate, resolveChannel } = require('../utils/helpers');
 
 function startBirthdayChecker(client) {
   cron.schedule('0 0 * * *', () => checkBirthdays(client));
@@ -20,7 +20,7 @@ async function checkBirthdays(client) {
     const channelId = await getConfig(bday.guild_id, 'birthday_channel');
     if (!channelId) continue;
 
-    const channel = guild.channels.cache.get(channelId) || await guild.channels.fetch(channelId).catch(() => null);
+    const channel = await resolveChannel(guild, channelId);
     if (!channel) continue;
 
     let member;
@@ -31,12 +31,12 @@ async function checkBirthdays(client) {
     }
 
     const customMsg = await getConfig(bday.guild_id, 'bday_notif_msg');
-    const template = customMsg || config.bdayNotifMsg || "🎂 Happy Birthday {user}! Wish you the best! 🥳🎉";
+    const template = customMsg || config.birthdayMsg;
 
-    const messageContent = config.formatMsg(template, {
-      user: member.toString(),
+    const messageContent = formatTemplate(template, {
+      user: member,
       username: member.user.username,
-      guildName: guild.name
+      guildName: guild.name,
     });
 
     await channel.send({ content: messageContent }).catch(() => {});
