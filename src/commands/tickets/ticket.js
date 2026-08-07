@@ -1,7 +1,7 @@
 const config = require('../../config.js');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, SlashCommandBuilder, ChannelType, MessageFlags } = require('discord.js');
 const { openTicket } = require('../../systems/tickets');
-const { requirePerms } = require('../../utils/helpers');
+const { requirePerms, normalizeNewlines } = require('../../utils/helpers');
 const { setConfig } = require('../../database/db');
 
 const DEFAULT_TITLE = '🎫 Support Tickets';
@@ -77,9 +77,9 @@ module.exports = {
       if (input.includes('|')) {
         const parts = input.split('|');
         title = parts[0].trim() || DEFAULT_TITLE;
-        description = parts.slice(1).join('|').trim().replace(/\\n/g, '\n') || DEFAULT_DESC;
+        description = normalizeNewlines(parts.slice(1).join('|').trim()) || DEFAULT_DESC;
       } else if (input.length > 0) {
-        description = input.replace(/\\n/g, '\n');
+        description = normalizeNewlines(input);
       }
 
       const panelEmbed = new EmbedBuilder()
@@ -138,7 +138,7 @@ module.exports = {
 
       const customTitle = interaction.options.getString('title') || DEFAULT_TITLE;
       const rawDesc = interaction.options.getString('description');
-      const customDesc = rawDesc ? rawDesc.replace(/\\n/g, '\n') : DEFAULT_DESC;
+      const customDesc = rawDesc ? normalizeNewlines(rawDesc) : DEFAULT_DESC;
 
       const panelEmbed = new EmbedBuilder()
           .setColor(config.color)

@@ -1,167 +1,97 @@
-const config = require('../../config.js');
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, SlashCommandBuilder, ChannelType, MessageFlags } = require('discord.js');
-const { openTicket } = require('../../systems/tickets');
-const { requirePerms, normalizeNewlines } = require('../../utils/helpers');
-const { setConfig } = require('../../database/db');
+const config = require('../config.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, ChannelType, MessageFlags } = require('discord.js');
+const { createTicket, getTicket, updateTicketStatus, getConfig } = require('../database/db');
 
-const DEFAULT_TITLE = '🎫 Support Tickets';
-const DEFAULT_DESC = 'Click the button below to open a support ticket.\nOur staff team will assist you as soon as possible.';
+let ticketCounter = {};
 
-const slashData = new SlashCommandBuilder()
-    .setName('ticket')
-    .setDescription('Manage or open support tickets')
-    .addSubcommand(sub =>
-        sub
-            .setName('open')
-            .setDescription('Open a new support ticket')
-    )
-    .addSubcommand(sub =>
-        sub
-            .setName('setup')
-            .setDescription('Configure ticket category, mod role, and logs')
-            .addChannelOption(opt =>
-                opt
-                    .setName('category')
-                    .setDescription('Select the CATEGORY where ticket channels will be created')
-                    .addChannelTypes(ChannelType.GuildCategory)
-                    .setRequired(true)
-            )
-            .addRoleOption(opt =>
-                opt
-                    .setName('mod_role')
-                    .setDescription('Staff/Mod role allowed to manage tickets')
-                    .setRequired(false)
-            )
-            .addChannelOption(opt =>
-                opt
-                    .setName('log_channel')
-                    .setDescription('Channel for deletion logs')
-                    .addChannelTypes(ChannelType.GuildText)
-                    .setRequired(false)
-            )
-    )
-    .addSubcommand(sub =>
-        sub
-            .setName('panel')
-            .setDescription('Send a ticket creation panel to the current channel')
-            .addStringOption(opt =>
-                opt
-                    .setName('title')
-                    .setDescription('Custom title for the ticket panel embed')
-                    .setRequired(false)
-            )
-            .addStringOption(opt =>
-                opt
-                    .setName('description')
-                    .setDescription('Custom description for the ticket panel embed (use \\n for new line)')
-                    .setRequired(false)
-            )
+async function openTicket(guild, user, client) {
+  const count = (ticketCounter[guild.id] || 0) + 1;
+  ticketCounter[guild.id] = count;
+
+  const supportCategoryId = await getConfig(guild.id, 'ticket_category');
+  const modRoleId = await getConfig(guild.id, 'mod_role');
+
+  let parentCategory = undefined;
+  if (supportCategoryId) {
+    const category = guild.channels.cache.get(supportCategoryId) || await guild.channels.fetch(supportCategoryId).catch(() => null);
+    if (category && category.type === ChannelType.GuildCategory) {
+      parentCategory = category.id;
+    }
+  }
+
+  const channel = await guild.channels.create({
+    name: `ticket-${count.toString().padStart(4, '0')}-${user.username}`,
+    type: ChannelType.GuildText,
+    parent: parentCategory,
+    permissionOverwrites: [
+      { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+      { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+    ],
+  });
+
+  if (modRoleId) {
+    await channel.permissionOverwrites.create(modRoleId, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true, ManageMessages: true });
+  }
+
+  await createTicket(channel.id, guild.id, user.id);
+
+  const embed = new EmbedBuilder().setColor(config.color).setTitle('🎫 Support Ticket')
+      .setDescription(`Hello ${user}, welcome to your support ticket!\nPlease describe your issue and a staff member will assist you shortly!`)
+      .addFields({ name: '📋 Instructions', value: 'Be clear and detailed.\nDo not ping staff unnecessarily.'})
+      .setFooter({ text: `Ticket #${count.toString().padStart(4, '0')}` }).setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('ticket_close').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete Ticket').setStyle(ButtonStyle.Danger),
+  );
+
+  await channel.send({ content: `${user}`, embeds: [embed], components: [row] });
+  return channel;
+}
+
+async function handleTicketInteraction(interaction, client) {
+  const { customId, guild, channel, member } = interaction;
+  const ticket = await getTicket(channel.id);
+  if (!ticket) return interaction.reply({ content: '❌ This is not a ticket channel.', flags: MessageFlags.Ephemeral });
+
+  const modRoleId = await getConfig(guild.id, 'mod_role');
+  const isStaff = modRoleId ? member.roles.cache.has(modRoleId) : member.permissions.has(PermissionFlagsBits.ManageMessages);
+  const isOwner = ticket.user_id === member.id;
+
+  if (customId === 'ticket_close') {
+    if (!isStaff && !isOwner) return interaction.reply({ content: '❌ You cannot close this ticket.', flags: MessageFlags.Ephemeral });
+    await updateTicketStatus(channel.id, 'closed');
+    const user = await guild.members.fetch(ticket.user_id).catch(() => null);
+    if (user) await channel.permissionOverwrites.edit(user, { SendMessages: false }).catch(() => {});
+    const embed = new EmbedBuilder().setColor(0xf59e0b).setTitle('🔒 Ticket Closed').setDescription(`Closed by ${member}\n\nOnly staff can now send messages.`).setTimestamp();
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('ticket_reopen').setLabel('🔓 Reopen').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete').setStyle(ButtonStyle.Danger),
     );
+    await interaction.update({ embeds: [embed], components: [row] });
 
-module.exports = {
-  name: 'ticket',
-  modOnly: false,
-  slashData,
+  } else if (customId === 'ticket_reopen') {
+    if (!isStaff) return interaction.reply({ content: '❌ Only staff can reopen tickets.', flags: MessageFlags.Ephemeral });
+    await updateTicketStatus(channel.id, 'open');
+    const user = await guild.members.fetch(ticket.user_id).catch(() => null);
+    if (user) await channel.permissionOverwrites.edit(user, { SendMessages: true }).catch(() => {});
+    const embed = new EmbedBuilder().setColor(config.successColor).setTitle('🔓 Ticket Reopened').setDescription(`Reopened by ${member}`).setTimestamp();
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('ticket_close').setLabel('🔒 Close').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('ticket_delete').setLabel('🗑️ Delete').setStyle(ButtonStyle.Danger),
+    );
+    await interaction.update({ embeds: [embed], components: [row] });
 
-  async execute(message, args, client, prefix) {
-    const sub = args[0]?.toLowerCase();
-
-    if (sub === 'panel') {
-      if (!requirePerms(message, PermissionFlagsBits.ManageGuild)) return;
-      await message.delete().catch(() => {});
-
-      const input = args.slice(1).join(' ');
-      let title = DEFAULT_TITLE;
-      let description = DEFAULT_DESC;
-
-      if (input.includes('|')) {
-        const parts = input.split('|');
-        title = parts[0].trim() || DEFAULT_TITLE;
-        description = normalizeNewlines(parts.slice(1).join('|').trim()) || DEFAULT_DESC;
-      } else if (input.length > 0) {
-        description = normalizeNewlines(input);
-      }
-
-      const panelEmbed = new EmbedBuilder()
-          .setColor(config.color)
-          .setTitle(title)
-          .setDescription(description)
-          .setFooter({ text: message.guild.name });
-
-      const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-              .setCustomId('ticket_open_panel')
-              .setLabel('📩 Open a Ticket')
-              .setStyle(ButtonStyle.Primary)
-      );
-
-      await message.channel.send({ embeds: [panelEmbed], components: [row] });
-      return;
+  } else if (customId === 'ticket_delete') {
+    if (!isStaff) return interaction.reply({ content: '❌ Only staff can delete tickets.', flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: '🗑️ Deleting ticket in 5 seconds...' });
+    const logChannelId = await getConfig(guild.id, 'log_channel');
+    if (logChannelId) {
+      const logCh = guild.channels.cache.get(logChannelId);
+      if (logCh) await logCh.send({ embeds: [new EmbedBuilder().setColor(config.errorColor).setTitle('🗑️ Ticket Deleted').addFields({ name: 'Channel', value: channel.name, inline: true }, { name: 'Opened By', value: `<@${ticket.user_id}>`, inline: true }, { name: 'Deleted By', value: `${member}`, inline: true }).setTimestamp()] }).catch(() => {});
     }
+    setTimeout(() => channel.delete().catch(() => {}), 5000);
+  }
+}
 
-    const channel = await openTicket(message.guild, message.author, client);
-    await message.reply({ content: `✅ Ticket created: ${channel}`, allowedMentions: { repliedUser: false } });
-  },
-
-  async executeSlash(interaction) {
-    const sub = interaction.options.getSubcommand();
-
-    if (sub === 'setup') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-        return interaction.reply({ content: '❌ You need `ManageGuild` permission to configure tickets.', flags: MessageFlags.Ephemeral });
-      }
-
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      const category = interaction.options.getChannel('category');
-      const modRole = interaction.options.getRole('mod_role');
-      const logChannel = interaction.options.getChannel('log_channel');
-
-      await setConfig(interaction.guild.id, 'ticket_category', category.id);
-      if (modRole) await setConfig(interaction.guild.id, 'mod_role', modRole.id);
-      if (logChannel) await setConfig(interaction.guild.id, 'log_channel', logChannel.id);
-
-      let responseText = `✅ **Ticket system successfully configured!**\n📁 **Category:** ${category.name}`;
-      if (modRole) responseText += `\n🛡️ **Staff Role:** ${modRole}`;
-      if (logChannel) responseText += `\n📜 **Logs Channel:** ${logChannel}`;
-
-      await interaction.editReply({ content: responseText });
-      return;
-    }
-
-    if (sub === 'panel') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-        return interaction.reply({ content: '❌ You need `ManageGuild` permission to send a ticket panel.', flags: MessageFlags.Ephemeral });
-      }
-
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      const customTitle = interaction.options.getString('title') || DEFAULT_TITLE;
-      const rawDesc = interaction.options.getString('description');
-      const customDesc = rawDesc ? normalizeNewlines(rawDesc) : DEFAULT_DESC;
-
-      const panelEmbed = new EmbedBuilder()
-          .setColor(config.color)
-          .setTitle(customTitle)
-          .setDescription(customDesc)
-          .setFooter({ text: interaction.guild.name });
-
-      const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-              .setCustomId('ticket_open_panel')
-              .setLabel('📩 Open a Ticket')
-              .setStyle(ButtonStyle.Primary)
-      );
-
-      await interaction.channel.send({ embeds: [panelEmbed], components: [row] });
-      await interaction.editReply({ content: '✅ Ticket panel sent!' });
-      return;
-    }
-
-    if (sub === 'open') {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const channel = await openTicket(interaction.guild, interaction.user, interaction.client);
-      await interaction.editReply({ content: `✅ Your ticket has been created: ${channel}` });
-    }
-  },
-};
+module.exports = { openTicket, handleTicketInteraction };
