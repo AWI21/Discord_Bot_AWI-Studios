@@ -38,6 +38,8 @@ async function startBot() {
   });
 
   await client.login(process.env.BOT_TOKEN);
+
+  return client;
 }
 
 module.exports = { startBot, client };

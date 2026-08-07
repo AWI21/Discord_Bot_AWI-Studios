@@ -13,7 +13,12 @@ async function init() {
         await startWebServer();
 
         client = await startBot();
-        registerAdvancedLogs(client);
+
+        if (client) {
+            registerAdvancedLogs(client);
+        } else {
+            console.error('❌ startBot() did not return a client instance — skipping advancedLogs registration.');
+        }
 
     } catch (error) {
         console.error("❌ Failed to start:", error);

@@ -22,6 +22,10 @@ async function sendLog(guild, embed) {
 }
 
 module.exports = (client) => {
+    if (!client) {
+        console.error('❌ advancedLogs: no client instance provided, skipping registration.');
+        return;
+    }
 
     client.on('channelUpdate', async (oldChannel, newChannel) => {
         if (!oldChannel.guild) return;
